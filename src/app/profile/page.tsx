@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { CustomChainsInput } from '@/components/route/custom-chains-input';
 import { LocationInput } from '@/components/route/location-input';
 import type { UserProfile } from '@/types/database';
-import { Save, LogOut } from 'lucide-react';
+import { Save, LogOut, FileSpreadsheet } from 'lucide-react';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -25,6 +25,7 @@ export default function ProfilePage() {
     default_store_duration_minutes: 40,
     preferred_chains: [],
   });
+  const [googleSheetId, setGoogleSheetId] = useState('');
 
   useEffect(() => {
     loadProfile();
@@ -43,6 +44,9 @@ export default function ProfilePage() {
 
     if (existing) {
       setProfile(existing);
+      // google_sheet_id lives outside UserProfile type — stored in the same row
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setGoogleSheetId((existing as any).google_sheet_id || '');
     } else {
       setProfile((prev) => ({
         ...prev,
@@ -66,6 +70,7 @@ export default function ProfilePage() {
       default_radius_miles: profile.default_radius_miles,
       default_store_duration_minutes: profile.default_store_duration_minutes,
       preferred_chains: profile.preferred_chains,
+      google_sheet_id: googleSheetId.trim() || null,
     };
 
     if (profile.id) {
@@ -140,6 +145,28 @@ export default function ProfilePage() {
                 }))
               }
             />
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet size={18} className="text-green-600" />
+            <CardTitle>Google Sheets — Calculadora Amazon</CardTitle>
+          </div>
+          <p className="mt-1 text-xs text-text-muted">
+            Pega el ID de tu hoja. Al evaluar una tienda podrás importar los totales automáticamente y la hoja se limpiará.
+          </p>
+          <div className="mt-3">
+            <Input
+              label="Google Sheet ID"
+              value={googleSheetId}
+              onChange={(e) => setGoogleSheetId(e.target.value)}
+              placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              Encuéntralo en la URL:{' '}
+              <span className="font-mono text-primary">docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit</span>
+            </p>
           </div>
         </Card>
 

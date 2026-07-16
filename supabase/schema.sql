@@ -15,6 +15,7 @@ create table users_profile (
   default_radius_miles integer default 30,
   default_store_duration_minutes integer default 40,
   preferred_chains text[] default '{}',
+  google_sheet_id text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

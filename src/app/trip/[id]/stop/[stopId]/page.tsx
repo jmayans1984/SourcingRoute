@@ -25,6 +25,7 @@ import {
   Camera,
   X,
   Loader2,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface StopWithStore extends TripStop {
@@ -73,6 +74,14 @@ export default function StopDetailPage({
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [products, setProducts] = useState<ProductEntry[]>([]);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    totalItems: number;
+    totalSpent: number;
+    projectedSales: number;
+    projectedProfit: number;
+    rowCount: number;
+  } | null>(null);
 
   useEffect(() => {
     loadStop();
@@ -95,6 +104,23 @@ export default function StopDetailPage({
       setTotalSpent(stopData.total_spent || 0);
       setTotalItemsBought(stopData.total_items_bought || 0);
       setReceiptUrls(stopData.receipt_photo_urls || []);
+    }
+  }
+
+  async function importFromSheets() {
+    setImporting(true);
+    try {
+      const res = await fetch('/api/sheets/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error importing');
+
+      setTotalSpent(data.totalSpent);
+      setTotalItemsBought(data.totalItems);
+      setImportResult(data);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al importar del Sheet');
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -337,11 +363,45 @@ export default function StopDetailPage({
 
         {/* Purchase totals */}
         <Card>
-          <CardTitle>Purchase Totals</CardTitle>
-          <p className="text-xs text-text-muted mt-0.5">
-            Quick totals for this store — used to calculate spend across the whole trip.
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Purchase Totals</CardTitle>
+              <p className="text-xs text-text-muted mt-0.5">
+                Ingresa manualmente o importa desde tu calculadora de Amazon.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={importFromSheets}
+              disabled={importing}
+              className="gap-1.5 shrink-0 border-green-500 text-green-700 hover:bg-green-50"
+            >
+              {importing ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <FileSpreadsheet size={14} />
+              )}
+              {importing ? 'Importando...' : 'Importar Sheet'}
+            </Button>
+          </div>
+
+          {importResult && (
+            <div className="mt-3 rounded-xl bg-green-50 border border-green-200 p-3 text-sm">
+              <p className="font-semibold text-green-800 mb-1.5">
+                ✓ Importado — {importResult.rowCount} producto{importResult.rowCount !== 1 ? 's' : ''} · hoja limpiada
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-green-700">
+                <span>Artículos: <strong>{importResult.totalItems}</strong></span>
+                <span>Gastado: <strong>${importResult.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
+                <span>Venta proyectada: <strong>${importResult.projectedSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
+                <span>Utilidad proyectada: <strong>${importResult.projectedProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <Input
               label="Amount Spent"
               type="number"
