@@ -37,6 +37,32 @@ interface TripTotals {
   totalStops: number;
 }
 
+type PeriodFilter = 'week' | 'month' | 'year' | 'all';
+
+const PERIOD_LABELS: Record<PeriodFilter, string> = {
+  week: 'Esta Semana',
+  month: 'Este Mes',
+  year: 'Este Año',
+  all: 'Todo',
+};
+
+function getStartOfWeek(): Date {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun, 1=Mon...
+  const diff = (day === 0 ? -6 : 1) - day; // back to Monday
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getPeriodStart(period: PeriodFilter): Date | null {
+  const now = new Date();
+  if (period === 'week') return getStartOfWeek();
+  if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1);
+  if (period === 'year') return new Date(now.getFullYear(), 0, 1);
+  return null;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [trips, setTrips] = useState<SourcingTrip[]>([]);
@@ -51,6 +77,7 @@ export default function DashboardPage() {
   const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
   const [tripTotals, setTripTotals] = useState<Record<string, TripTotals>>({});
   const [selectedTrip, setSelectedTrip] = useState<SourcingTrip | null>(null);
+  const [period, setPeriod] = useState<PeriodFilter>('week');
 
   useEffect(() => {
     loadDashboard();
@@ -155,6 +182,24 @@ export default function DashboardPage() {
     }
   }
 
+  // Filter trips by selected period
+  const periodStart = getPeriodStart(period);
+  const filteredTrips = periodStart
+    ? trips.filter((t) => new Date(t.trip_date) >= periodStart!)
+    : trips;
+
+  // KPIs derived from the filtered trips
+  const filteredTotalSpent = filteredTrips.reduce(
+    (sum, t) => sum + (tripTotals[t.id]?.spent || 0),
+    0
+  );
+  const filteredTotalItems = filteredTrips.reduce(
+    (sum, t) => sum + (tripTotals[t.id]?.itemsBought || 0),
+    0
+  );
+  const filteredAvgCost =
+    filteredTotalItems > 0 ? filteredTotalSpent / filteredTotalItems : 0;
+
   return (
     <>
       <Header title="SourcingRoute" />
@@ -174,18 +219,19 @@ export default function DashboardPage() {
           </Link>
         </div>
 
+        {/* Historical KPIs (all-time) */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Card>
             <div className="flex items-center gap-2 text-text-secondary">
               <Store size={16} />
-              <span className="text-xs">Stores Visited</span>
+              <span className="text-xs">Tiendas Visitadas</span>
             </div>
             <p className="mt-1 text-2xl font-bold">{stats.totalStoresVisited}</p>
           </Card>
           <Card>
             <div className="flex items-center gap-2 text-text-secondary">
               <DollarSign size={16} />
-              <span className="text-xs">Est. Profit</span>
+              <span className="text-xs">Ganancia Estimada</span>
             </div>
             <p className="mt-1 text-2xl font-bold text-secondary">
               ${stats.totalProfit.toLocaleString()}
@@ -194,34 +240,88 @@ export default function DashboardPage() {
           <Card>
             <div className="flex items-center gap-2 text-text-secondary">
               <Package size={16} />
-              <span className="text-xs">Products Found</span>
+              <span className="text-xs">Productos Encontrados</span>
             </div>
             <p className="mt-1 text-2xl font-bold">{stats.totalProducts}</p>
           </Card>
           <Card>
             <div className="flex items-center gap-2 text-text-secondary">
               <TrendingUp size={16} />
-              <span className="text-xs">Total Trips</span>
+              <span className="text-xs">Total Rutas</span>
             </div>
             <p className="mt-1 text-2xl font-bold">{stats.totalTrips}</p>
           </Card>
         </div>
 
-        <div>
-          <h3 className="mb-2 text-sm font-semibold text-text-secondary uppercase tracking-wide">
-            My Routes
+        {/* Period filter */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
+            Mis Rutas
           </h3>
+          <div className="inline-flex rounded-xl border border-border bg-surface p-1 gap-0.5">
+            {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
+                  period === p
+                    ? 'bg-primary text-white'
+                    : 'text-text-secondary hover:text-text'
+                }`}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
 
+        {/* KPIs for the filtered period */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card>
+            <div className="flex items-center gap-2 text-text-secondary">
+              <DollarSign size={16} />
+              <span className="text-xs">Total Gastado</span>
+            </div>
+            <p className="mt-1 text-2xl font-bold text-primary">
+              ${filteredTotalSpent.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-xs text-text-muted">{PERIOD_LABELS[period]}</p>
+          </Card>
+          <Card>
+            <div className="flex items-center gap-2 text-text-secondary">
+              <Package size={16} />
+              <span className="text-xs">Total Artículos</span>
+            </div>
+            <p className="mt-1 text-2xl font-bold">{filteredTotalItems}</p>
+            <p className="text-xs text-text-muted">{PERIOD_LABELS[period]}</p>
+          </Card>
+          <Card>
+            <div className="flex items-center gap-2 text-text-secondary">
+              <TrendingUp size={16} />
+              <span className="text-xs">Costo/Artículo</span>
+            </div>
+            <p className="mt-1 text-2xl font-bold text-secondary">
+              ${filteredAvgCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-xs text-text-muted">{PERIOD_LABELS[period]}</p>
+          </Card>
+        </div>
+
+        <div>
           {loading ? (
             <div className="flex items-center justify-center p-12">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
-          ) : trips.length === 0 ? (
+          ) : filteredTrips.length === 0 ? (
             <Card className="text-center py-8">
               <MapPin size={40} className="mx-auto text-text-muted mb-3" />
-              <p className="font-medium text-text">No trips yet</p>
+              <p className="font-medium text-text">
+                {trips.length === 0 ? 'No hay rutas aún' : `Sin rutas en ${PERIOD_LABELS[period].toLowerCase()}`}
+              </p>
               <p className="text-sm text-text-muted mt-1">
-                Create your first sourcing route to get started
+                {trips.length === 0
+                  ? 'Crea tu primera ruta para empezar'
+                  : 'Cambia el período o crea una nueva ruta'}
               </p>
             </Card>
           ) : (
@@ -242,7 +342,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {trips.map((trip) => {
+                    {filteredTrips.map((trip) => {
                       const totals = tripTotals[trip.id];
                       const timeWorked =
                         (trip.total_drive_minutes || 0) + (trip.total_store_minutes || 0);
