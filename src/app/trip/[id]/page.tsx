@@ -11,7 +11,8 @@ import { StopStatusBadge, ScoreBadge } from '@/components/ui/badge';
 import { TripRouteMap } from '@/components/maps/trip-route-map';
 import { buildWazeUrl, buildGoogleMapsStopUrl } from '@/utils/navigation';
 import { formatDuration } from '@/utils/geo';
-import type { SourcingTrip, TripStop, Store, StopStatus } from '@/types/database';
+import { calculateStoreScore } from '@/utils/scoring';
+import type { SourcingTrip, TripStop, Store, StopStatus, StoreVisit } from '@/types/database';
 import {
   Navigation,
   ExternalLink,
@@ -45,6 +46,8 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
   const [updatingRoute, setUpdatingRoute] = useState(false);
   const [orderChanged, setOrderChanged] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
+  // Real scores calculated from visit history (keyed by store_id)
+  const [storeScores, setStoreScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadTrip();
@@ -52,6 +55,8 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
 
   async function loadTrip() {
     const supabase = createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     const [{ data: tripData }, { data: stopsData }] = await Promise.all([
       supabase.from('sourcing_trips').select('*').eq('id', id).single(),
@@ -63,7 +68,40 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
     ]);
 
     if (tripData) setTrip(tripData);
-    if (stopsData) setStops(stopsData as StopWithStore[]);
+    if (stopsData) {
+      setStops(stopsData as StopWithStore[]);
+
+      // Calculate real scores from visit history for each store in this trip
+      if (user && stopsData.length > 0) {
+        const storeIds = stopsData.map((s) => s.store_id);
+        const { data: visits } = await supabase
+          .from('store_visits')
+          .select('*')
+          .eq('user_id', user.id)
+          .in('store_id', storeIds);
+
+        if (visits) {
+          const visitsByStore: Record<string, StoreVisit[]> = {};
+          visits.forEach((v) => {
+            if (!visitsByStore[v.store_id]) visitsByStore[v.store_id] = [];
+            visitsByStore[v.store_id].push(v);
+          });
+
+          const scores: Record<string, number> = {};
+          stopsData.forEach((stop) => {
+            const storeVisits = visitsByStore[stop.store_id] || [];
+            scores[stop.store_id] = calculateStoreScore({
+              store: stop.store,
+              visits: storeVisits,
+              preference: null,
+              distanceMiles: stop.drive_miles_from_previous ?? 0,
+              chainPriority: 5,
+            }).total;
+          });
+          setStoreScores(scores);
+        }
+      }
+    }
     setLoading(false);
   }
 
@@ -369,7 +407,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-sm truncate">{stop.store.name}</p>
-                        <ScoreBadge score={stop.score} />
+                        <ScoreBadge score={storeScores[stop.store_id] ?? stop.score} />
                         {isPendingRemoval && (
                           <span className="text-xs font-medium text-danger">Marked for removal</span>
                         )}
