@@ -76,6 +76,7 @@ export default function StopDetailPage({
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [projectedProfit, setProjectedProfit] = useState<number>(0);
+  const [projectedSales, setProjectedSales] = useState<number>(0);
   const [importResult, setImportResult] = useState<{
     totalItems: number;
     totalSpent: number;
@@ -118,6 +119,7 @@ export default function StopDetailPage({
       setTotalSpent(data.totalSpent);
       setTotalItemsBought(data.totalItems);
       setProjectedProfit(data.projectedProfit);
+      setProjectedSales(data.projectedSales);
       setImportResult(data);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al importar del Sheet');
@@ -392,22 +394,14 @@ export default function StopDetailPage({
           </div>
 
           {importResult && (
-            <div className="mt-3 rounded-xl bg-green-50 border border-green-200 p-3 text-sm">
-              <p className="font-semibold text-green-800 mb-1.5">
-                ✓ Importado — {importResult.rowCount} producto{importResult.rowCount !== 1 ? 's' : ''} · hoja limpiada
-              </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-green-700">
-                <span>Artículos: <strong>{importResult.totalItems}</strong></span>
-                <span>Gastado: <strong>${importResult.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
-                <span>Venta proyectada: <strong>${importResult.projectedSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
-                <span>Utilidad proyectada: <strong>${importResult.projectedProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
-              </div>
+            <div className="mt-3 rounded-xl bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
+              ✓ Importado — <strong>{importResult.rowCount} producto{importResult.rowCount !== 1 ? 's' : ''}</strong> · hoja limpiada
             </div>
           )}
 
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Input
-              label="Amount Spent"
+              label="Gastado"
               type="number"
               step="0.01"
               min="0"
@@ -416,12 +410,30 @@ export default function StopDetailPage({
               placeholder="$0.00"
             />
             <Input
-              label="Items Bought"
+              label="Artículos Comprados"
               type="number"
               min="0"
               value={totalItemsBought || ''}
               onChange={(e) => setTotalItemsBought(Number(e.target.value))}
               placeholder="0"
+            />
+            <Input
+              label="Venta Proyectada"
+              type="number"
+              step="0.01"
+              min="0"
+              value={projectedSales || ''}
+              onChange={(e) => setProjectedSales(Number(e.target.value))}
+              placeholder="$0.00"
+            />
+            <Input
+              label="Utilidad Proyectada"
+              type="number"
+              step="0.01"
+              min="0"
+              value={projectedProfit || ''}
+              onChange={(e) => setProjectedProfit(Number(e.target.value))}
+              placeholder="$0.00"
             />
           </div>
         </Card>
