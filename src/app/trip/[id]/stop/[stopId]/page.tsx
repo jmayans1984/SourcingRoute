@@ -35,10 +35,14 @@ interface StopWithStore extends TripStop {
 interface ProductEntry {
   product_name: string;
   asin?: string;
+  upc?: string;
   buy_cost: number;
   estimated_sale_price: number;
   quantity_found: number;
   quantity_bought: number;
+  total_cost?: number;
+  total_sales?: number;
+  total_profit?: number;
   notes: string;
 }
 
@@ -546,33 +550,36 @@ export default function StopDetailPage({
           <Card>
             <CardTitle>Productos Importados</CardTitle>
             <p className="text-xs text-text-muted mt-0.5">
-              Hist. = unidades de este producto ya compradas en otras tiendas de esta misma ruta.
+              Agrupado por código · Hist. = qty comprada en otras tiendas de esta ruta.
             </p>
             <div className="mt-3 overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-xs min-w-[480px]">
+              <table className="w-full text-xs min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border text-text-muted">
                     <th className="pb-2 text-left font-medium">Producto</th>
-                    <th className="pb-2 text-right font-medium">Costo</th>
-                    <th className="pb-2 text-right font-medium">Venta</th>
                     <th className="pb-2 text-right font-medium">Qty</th>
+                    <th className="pb-2 text-right font-medium">COGS</th>
+                    <th className="pb-2 text-right font-medium">Venta</th>
                     <th className="pb-2 text-right font-medium">Hist.</th>
                     <th className="pb-2 text-right font-medium">Utilidad</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {products.map((p, i) => {
-                    const profit = (p.estimated_sale_price - p.buy_cost) * p.quantity_bought;
-                    const hist = historicalQty[p.product_name] ?? 0;
+                    const cogs    = p.total_cost    ?? p.buy_cost * p.quantity_bought;
+                    const sales   = p.total_sales   ?? p.estimated_sale_price * p.quantity_bought;
+                    const profit  = p.total_profit  ?? (p.estimated_sale_price - p.buy_cost) * p.quantity_bought;
+                    const hist    = historicalQty[p.product_name] ?? 0;
+                    const code    = p.upc || p.asin || '';
                     return (
                       <tr key={i} className="text-text">
                         <td className="py-2 pr-3 max-w-[160px]">
                           <p className="truncate font-medium">{p.product_name}</p>
-                          {p.asin && <p className="text-text-muted truncate">{p.asin}</p>}
+                          {code && <p className="text-text-muted truncate">{code}</p>}
                         </td>
-                        <td className="py-2 text-right">${p.buy_cost.toFixed(2)}</td>
-                        <td className="py-2 text-right">${p.estimated_sale_price.toFixed(2)}</td>
-                        <td className="py-2 text-right font-medium">{p.quantity_bought}</td>
+                        <td className="py-2 text-right font-semibold">{p.quantity_bought}</td>
+                        <td className="py-2 text-right">${cogs.toFixed(2)}</td>
+                        <td className="py-2 text-right">${sales.toFixed(2)}</td>
                         <td className={`py-2 text-right font-semibold ${hist > 0 ? 'text-amber-600' : 'text-text-muted'}`}>
                           {hist > 0 ? hist : '—'}
                         </td>
