@@ -110,12 +110,22 @@ export async function GET(req: NextRequest) {
       projectedProfit += profit * qty;
     }
 
+    const products = rows.map((row) => ({
+      product_name: row[1] ?? '',
+      buy_cost:             toNumber(row[COL.COST_PRICE]),
+      estimated_sale_price: toNumber(row[COL.SALE_PRICE]),
+      quantity_found:  Math.round(toNumber(row[COL.QUANTITY])),
+      quantity_bought: Math.round(toNumber(row[COL.QUANTITY])),
+      notes: row[2] ?? '',  // ASIN as note
+    })).filter((p) => p.product_name);
+
     return NextResponse.json({
       totalItems:      Math.round(totalItems),
       totalSpent:      Math.round(totalSpent * 100) / 100,
       projectedSales:  Math.round(projectedSales * 100) / 100,
       projectedProfit: Math.round(projectedProfit * 100) / 100,
       rowCount:        rows.length,
+      products,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -176,6 +186,15 @@ export async function POST(req: NextRequest) {
       projectedProfit += profit * qty;
     }
 
+    const products = rows.map((row) => ({
+      product_name: row[1] ?? '',
+      buy_cost:             toNumber(row[COL.COST_PRICE]),
+      estimated_sale_price: toNumber(row[COL.SALE_PRICE]),
+      quantity_found:  Math.round(toNumber(row[COL.QUANTITY])),
+      quantity_bought: Math.round(toNumber(row[COL.QUANTITY])),
+      notes: row[2] ?? '',  // ASIN as note
+    })).filter((p) => p.product_name);
+
     // 2. Clear from row 2 onwards
     if (rows.length > 0) {
       await sheets.spreadsheets.values.clear({ spreadsheetId: sheetId, range });
@@ -187,6 +206,7 @@ export async function POST(req: NextRequest) {
       projectedSales:  Math.round(projectedSales * 100) / 100,
       projectedProfit: Math.round(projectedProfit * 100) / 100,
       rowCount:        rows.length,
+      products,
       cleared:         true,
     });
   } catch (err) {

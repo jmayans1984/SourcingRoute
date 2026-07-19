@@ -139,6 +139,9 @@ export default function StopDetailPage({
       setProjectedProfit(data.projectedProfit);
       setProjectedSales(data.projectedSales);
       setImportResult(data);
+      if (data.products?.length > 0) {
+        setProducts(data.products);
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al importar del Sheet');
     } finally {
