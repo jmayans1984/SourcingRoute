@@ -97,11 +97,15 @@ export default function StopDetailPage({
 
   async function loadStop() {
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('trip_stops')
       .select('*, store:stores(*)')
       .eq('id', stopId)
       .single();
+
+    if (error) {
+      console.error('[loadStop] trip_stops select failed:', error);
+    }
 
     if (data) {
       const stopData = data as StopWithStore;
@@ -265,7 +269,7 @@ export default function StopDetailPage({
     // Prefer projected profit from Google Sheets import; fall back to manual products
     const finalProfit = projectedProfit > 0 ? projectedProfit : productsProfit;
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('trip_stops')
       .update({
         status: 'completed',
@@ -281,6 +285,13 @@ export default function StopDetailPage({
         actual_departure_at: new Date().toISOString(),
       })
       .eq('id', stopId);
+
+    if (updateError) {
+      console.error('[saveAndComplete] trip_stops update failed:', updateError);
+      alert(`Error al guardar: ${updateError.message}`);
+      setSaving(false);
+      return;
+    }
 
     if (rating) {
       await supabase.from('store_visits').insert({
