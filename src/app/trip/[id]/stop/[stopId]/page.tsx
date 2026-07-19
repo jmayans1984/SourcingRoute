@@ -283,9 +283,11 @@ export default function StopDetailPage({
           trip_id: id,
           trip_stop_id: stopId,
           product_name: p.product_name,
+          upc: p.upc || p.asin || null,
           buy_cost: p.buy_cost,
           estimated_sale_price: p.estimated_sale_price,
-          estimated_profit: (p.estimated_sale_price - p.buy_cost) * p.quantity_bought,
+          estimated_profit:
+            p.total_profit ?? (p.estimated_sale_price - p.buy_cost) * p.quantity_bought,
           roi_percent:
             p.buy_cost > 0
               ? Math.round(((p.estimated_sale_price - p.buy_cost) / p.buy_cost) * 100)

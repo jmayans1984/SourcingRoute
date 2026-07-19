@@ -31,10 +31,24 @@ import {
   ChevronUp,
   ChevronDown,
   ListOrdered,
+  TrendingUp,
+  ShoppingBag,
+  Search,
+  X,
+  Loader2,
 } from 'lucide-react';
 
 interface StopWithStore extends TripStop {
   store: Store;
+}
+
+interface GroupedProduct {
+  code: string;
+  product_name: string;
+  quantity: number;
+  totalCost: number;
+  totalProfit: number;
+  stores: string[];
 }
 
 export default function TripPage({ params }: { params: Promise<{ id: string }> }) {
@@ -48,6 +62,9 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
   const [savingOrder, setSavingOrder] = useState(false);
   // Real scores calculated from visit history (keyed by store_id)
   const [storeScores, setStoreScores] = useState<Record<string, number>>({});
+  const [showProducts, setShowProducts] = useState(false);
+  const [tripProducts, setTripProducts] = useState<GroupedProduct[] | null>(null);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   useEffect(() => {
     loadTrip();
@@ -103,6 +120,54 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       }
     }
     setLoading(false);
+  }
+
+  async function openProducts() {
+    setShowProducts(true);
+    if (tripProducts !== null) return; // already loaded
+
+    setLoadingProducts(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('found_products')
+      .select('product_name, upc, notes, quantity_bought, buy_cost, estimated_profit, store:stores(name)')
+      .eq('trip_id', id);
+
+    const grouped = new Map<string, GroupedProduct>();
+    for (const row of data ?? []) {
+      const r = row as unknown as {
+        product_name: string;
+        upc: string | null;
+        notes: string | null;
+        quantity_bought: number | null;
+        buy_cost: number | null;
+        estimated_profit: number | null;
+        store: { name: string } | null;
+      };
+      const code = r.upc || r.notes || r.product_name;
+      const qty = r.quantity_bought ?? 0;
+      const storeName = r.store?.name ?? '';
+
+      const existing = grouped.get(code);
+      if (existing) {
+        existing.quantity += qty;
+        existing.totalCost += (r.buy_cost ?? 0) * qty;
+        existing.totalProfit += r.estimated_profit ?? 0;
+        if (storeName && !existing.stores.includes(storeName)) existing.stores.push(storeName);
+      } else {
+        grouped.set(code, {
+          code,
+          product_name: r.product_name,
+          quantity: qty,
+          totalCost: (r.buy_cost ?? 0) * qty,
+          totalProfit: r.estimated_profit ?? 0,
+          stores: storeName ? [storeName] : [],
+        });
+      }
+    }
+
+    setTripProducts(Array.from(grouped.values()).sort((a, b) => b.quantity - a.quantity));
+    setLoadingProducts(false);
   }
 
   async function updateStopStatus(stopId: string, status: StopStatus) {
@@ -247,6 +312,9 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
 
   const totalItemsBought = stops.reduce((sum, s) => sum + (s.total_items_bought || 0), 0);
   const totalSpent = stops.reduce((sum, s) => sum + (s.total_spent || 0), 0);
+  const totalProfit = stops.reduce((sum, s) => sum + (s.estimated_profit || 0), 0);
+  const roiPercent = totalSpent > 0 ? Math.round((totalProfit / totalSpent) * 100) : 0;
+  const progressPct = stops.length > 0 ? Math.round((completedStops / stops.length) * 100) : 0;
 
   return (
     <AppShell>
@@ -265,61 +333,101 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       />
 
       <div className="space-y-4 p-4 md:p-0">
-        {/* Trip KPIs */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <Card className="text-center">
-            <div className="flex items-center justify-center gap-1 text-text-muted">
-              <StoreIcon size={14} />
+        {/* Progress + quick actions */}
+        <Card>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold">
+                  Progreso de la ruta
+                </p>
+                <span className="text-xs font-medium text-text-muted">
+                  {completedStops}/{stops.length} tiendas
+                </span>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-secondary">
+                <div
+                  className={`h-full rounded-full transition-all ${allDone ? 'bg-green-500' : 'bg-primary'}`}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
             </div>
-            <p className="mt-1 text-lg font-bold">{stops.length}</p>
-            <p className="text-xs text-text-muted">Total Stores</p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={openProducts}
+              className="shrink-0 gap-1.5"
+            >
+              <ShoppingBag size={14} />
+              Productos
+            </Button>
+          </div>
+        </Card>
+
+        {/* Money KPIs — the ones that matter while sourcing */}
+        <div className="grid grid-cols-3 gap-2 md:gap-3">
+          <Card className="!p-3 text-center">
+            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-primary">
+              <Package size={15} />
+            </div>
+            <p className="mt-1.5 text-lg font-bold leading-tight">{totalItemsBought}</p>
+            <p className="text-[11px] text-text-muted">Artículos</p>
           </Card>
-          <Card className="text-center">
-            <div className="flex items-center justify-center gap-1 text-text-muted">
-              <Clock size={14} />
+          <Card className="!p-3 text-center">
+            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-danger">
+              <DollarSign size={15} />
             </div>
-            <p className="mt-1 text-lg font-bold">
-              {trip.total_store_minutes ? formatDuration(trip.total_store_minutes) : '--'}
+            <p className="mt-1.5 text-lg font-bold leading-tight">
+              ${totalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
-            <p className="text-xs text-text-muted">Time in Stores</p>
+            <p className="text-[11px] text-text-muted">Gastado</p>
           </Card>
-          <Card className="text-center">
-            <div className="flex items-center justify-center gap-1 text-text-muted">
-              <Car size={14} />
+          <Card className="!p-3 text-center">
+            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-green-50 text-green-600">
+              <TrendingUp size={15} />
             </div>
-            <p className="mt-1 text-lg font-bold">
-              {trip.total_drive_minutes ? formatDuration(trip.total_drive_minutes) : '--'}
+            <p className="mt-1.5 text-lg font-bold leading-tight text-green-600">
+              ${totalProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
-            <p className="text-xs text-text-muted">Driving Time</p>
-          </Card>
-          <Card className="text-center">
-            <div className="flex items-center justify-center gap-1 text-text-muted">
-              <Clock size={14} />
-            </div>
-            <p className="mt-1 text-lg font-bold">
-              {trip.total_drive_minutes && trip.total_store_minutes
-                ? formatDuration(trip.total_drive_minutes + trip.total_store_minutes)
-                : '--'}
+            <p className="text-[11px] text-text-muted">
+              Utilidad{roiPercent > 0 ? ` · ${roiPercent}% ROI` : ''}
             </p>
-            <p className="text-xs text-text-muted">Total Time</p>
-          </Card>
-          <Card className="text-center">
-            <div className="flex items-center justify-center gap-1 text-text-muted">
-              <Package size={14} />
-            </div>
-            <p className="mt-1 text-lg font-bold">{totalItemsBought}</p>
-            <p className="text-xs text-text-muted">Items Bought</p>
-          </Card>
-          <Card className="text-center">
-            <div className="flex items-center justify-center gap-1 text-text-muted">
-              <DollarSign size={14} />
-            </div>
-            <p className="mt-1 text-lg font-bold text-secondary">
-              ${totalSpent.toLocaleString()}
-            </p>
-            <p className="text-xs text-text-muted">Total Spent</p>
           </Card>
         </div>
+
+        {/* Time / logistics strip */}
+        <Card className="!p-3">
+          <div className="grid grid-cols-4 divide-x divide-border text-center">
+            <div className="px-1">
+              <StoreIcon size={13} className="mx-auto text-text-muted" />
+              <p className="mt-1 text-sm font-semibold leading-tight">{stops.length}</p>
+              <p className="text-[10px] text-text-muted">Tiendas</p>
+            </div>
+            <div className="px-1">
+              <Clock size={13} className="mx-auto text-text-muted" />
+              <p className="mt-1 text-sm font-semibold leading-tight">
+                {trip.total_store_minutes ? formatDuration(trip.total_store_minutes) : '--'}
+              </p>
+              <p className="text-[10px] text-text-muted">En tiendas</p>
+            </div>
+            <div className="px-1">
+              <Car size={13} className="mx-auto text-text-muted" />
+              <p className="mt-1 text-sm font-semibold leading-tight">
+                {trip.total_drive_minutes ? formatDuration(trip.total_drive_minutes) : '--'}
+              </p>
+              <p className="text-[10px] text-text-muted">Manejando</p>
+            </div>
+            <div className="px-1">
+              <Clock size={13} className="mx-auto text-text-muted" />
+              <p className="mt-1 text-sm font-semibold leading-tight">
+                {trip.total_drive_minutes && trip.total_store_minutes
+                  ? formatDuration(trip.total_drive_minutes + trip.total_store_minutes)
+                  : '--'}
+              </p>
+              <p className="text-[10px] text-text-muted">Total</p>
+            </div>
+          </div>
+        </Card>
 
         {/* Route map - full width */}
         {stops.length > 0 && (
@@ -547,6 +655,85 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
           </div>
         </div>
       </div>
+
+      {/* Products bought during this route — grouped by product code */}
+      {showProducts && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
+          onClick={() => setShowProducts(false)}
+        >
+          <div
+            className="flex max-h-[85vh] w-full flex-col rounded-t-2xl bg-surface sm:max-w-lg sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div>
+                <p className="font-semibold">Productos de la ruta</p>
+                <p className="text-xs text-text-muted">
+                  Agrupados por código · toca uno para buscarlo en Google
+                </p>
+              </div>
+              <button
+                onClick={() => setShowProducts(false)}
+                className="rounded-full p-1.5 text-text-muted hover:bg-surface-secondary"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3">
+              {loadingProducts ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 size={24} className="animate-spin text-primary" />
+                </div>
+              ) : !tripProducts || tripProducts.length === 0 ? (
+                <p className="py-10 text-center text-sm text-text-muted">
+                  Aún no has comprado productos en esta ruta.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {tripProducts.map((p) => (
+                    <a
+                      key={p.code}
+                      href={`https://www.google.com/search?q=${encodeURIComponent(p.code)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-xl border border-border p-3 transition-colors hover:border-primary/40 hover:bg-blue-50/40"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 font-bold text-primary text-sm">
+                        {p.quantity}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{p.product_name}</p>
+                        <p className="truncate text-xs text-text-muted">
+                          {p.code}
+                          {p.stores.length > 0 && ` · ${p.stores.join(', ')}`}
+                        </p>
+                        <div className="mt-0.5 flex items-center gap-3 text-xs">
+                          <span className="text-text-secondary">
+                            COGS ${p.totalCost.toFixed(2)}
+                          </span>
+                          <span className={`font-medium ${p.totalProfit >= 0 ? 'text-green-600' : 'text-danger'}`}>
+                            Utilidad ${p.totalProfit.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      <Search size={15} className="shrink-0 text-text-muted" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {tripProducts && tripProducts.length > 0 && (
+              <div className="border-t border-border px-4 py-3 text-center text-xs text-text-muted">
+                {tripProducts.reduce((s, p) => s + p.quantity, 0)} unidades ·{' '}
+                {tripProducts.length} producto{tripProducts.length !== 1 ? 's' : ''} distintos
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
