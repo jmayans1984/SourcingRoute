@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     const sheets = google.sheets({ version: 'v4', auth });
 
     // Read all data rows (row 2 onwards — row 1 is headers)
-    const range = 'Sheet1!A2:I';
+    const range = 'A2:I';
     const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
     const rows = res.data.values ?? [];
 
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
     const sheets = google.sheets({ version: 'v4', auth });
 
     // 1. Read
-    const range = 'Sheet1!A2:I';
+    const range = 'A2:I';
     const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
     const rows = res.data.values ?? [];
 
