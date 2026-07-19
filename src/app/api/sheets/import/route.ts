@@ -24,16 +24,14 @@ function getAuth() {
     throw new Error('Google Sheets credentials not configured');
   }
 
-  // Vercel stores env vars as strings — newlines may be escaped as \n or \\n.
-  // Normalize to actual newline characters so the PEM parser accepts the key.
-  const privateKey = rawKey
-    .replace(/\\n/g, '\n')   // literal \n → newline
-    .replace(/\\\\n/g, '\n') // double-escaped \\n → newline
-    .trim();
+  // Normalize escaped newlines from Vercel env vars
+  const privateKey = rawKey.replace(/\\n/g, '\n');
 
-  return new google.auth.JWT({
-    email: clientEmail,
-    key:   privateKey,
+  return new google.auth.GoogleAuth({
+    credentials: {
+      client_email: clientEmail,
+      private_key: privateKey,
+    },
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
 }
