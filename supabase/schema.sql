@@ -281,3 +281,6 @@ create policy "Users can delete own trip expenses" on trip_expenses for delete u
 
 create index idx_trip_expenses_user on trip_expenses(user_id);
 create index idx_trip_expenses_trip on trip_expenses(trip_id);
+
+-- Projected sales from Amazon calculator import, persisted alongside estimated_profit
+alter table trip_stops add column if not exists projected_sales double precision default 0;

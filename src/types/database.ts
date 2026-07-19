@@ -85,6 +85,7 @@ export interface TripStop {
   notes: string | null;
   found_products_count: number;
   estimated_profit: number;
+  projected_sales: number;
   total_spent: number;
   total_items_bought: number;
   receipt_photo_urls: string[] | null;

@@ -111,7 +111,32 @@ export default function StopDetailPage({
       setNotes(stopData.notes || '');
       setTotalSpent(stopData.total_spent || 0);
       setTotalItemsBought(stopData.total_items_bought || 0);
+      setProjectedProfit(stopData.estimated_profit || 0);
+      setProjectedSales(stopData.projected_sales || 0);
       setReceiptUrls(stopData.receipt_photo_urls || []);
+
+      // Load previously saved products for this stop (e.g. viewing a completed visit)
+      const { data: savedProducts } = await supabase
+        .from('found_products')
+        .select('product_name, upc, buy_cost, estimated_sale_price, quantity_found, quantity_bought, estimated_profit, notes')
+        .eq('trip_stop_id', stopId);
+
+      if (savedProducts && savedProducts.length > 0) {
+        setProducts(
+          savedProducts.map((p) => ({
+            product_name: p.product_name,
+            upc: p.upc || undefined,
+            buy_cost: p.buy_cost || 0,
+            estimated_sale_price: p.estimated_sale_price || 0,
+            quantity_found: p.quantity_found || 0,
+            quantity_bought: p.quantity_bought || 0,
+            total_cost: (p.buy_cost || 0) * (p.quantity_bought || 0),
+            total_sales: (p.estimated_sale_price || 0) * (p.quantity_bought || 0),
+            total_profit: p.estimated_profit || 0,
+            notes: p.notes || '',
+          }))
+        );
+      }
     }
   }
 
@@ -249,6 +274,7 @@ export default function StopDetailPage({
         notes,
         found_products_count: totalItemsBought || products.length,
         estimated_profit: finalProfit,
+        projected_sales: projectedSales,
         total_spent: totalSpent,
         total_items_bought: totalItemsBought,
         receipt_photo_urls: receiptUrls,
@@ -275,6 +301,9 @@ export default function StopDetailPage({
     }
 
     if (products.length > 0) {
+      // Avoid duplicating rows if re-saving an already-completed stop
+      await supabase.from('found_products').delete().eq('trip_stop_id', stopId);
+
       const productRecords = products
         .filter((p) => p.product_name)
         .map((p) => ({
