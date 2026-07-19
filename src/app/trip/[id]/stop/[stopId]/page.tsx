@@ -75,6 +75,7 @@ export default function StopDetailPage({
   const [products, setProducts] = useState<ProductEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [projectedProfit, setProjectedProfit] = useState<number>(0);
   const [importResult, setImportResult] = useState<{
     totalItems: number;
     totalSpent: number;
@@ -116,6 +117,7 @@ export default function StopDetailPage({
 
       setTotalSpent(data.totalSpent);
       setTotalItemsBought(data.totalItems);
+      setProjectedProfit(data.projectedProfit);
       setImportResult(data);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al importar del Sheet');
@@ -182,10 +184,12 @@ export default function StopDetailPage({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const totalProfit = products.reduce(
+    const productsProfit = products.reduce(
       (sum, p) => sum + (p.estimated_sale_price - p.buy_cost) * p.quantity_bought,
       0
     );
+    // Prefer projected profit from Google Sheets import; fall back to manual products
+    const finalProfit = projectedProfit > 0 ? projectedProfit : productsProfit;
 
     await supabase
       .from('trip_stops')
@@ -194,8 +198,8 @@ export default function StopDetailPage({
         user_rating: rating,
         wifi_signal: wifiSignal,
         notes,
-        found_products_count: products.length,
-        estimated_profit: totalProfit,
+        found_products_count: totalItemsBought || products.length,
+        estimated_profit: finalProfit,
         total_spent: totalSpent,
         total_items_bought: totalItemsBought,
         receipt_photo_urls: receiptUrls,
@@ -211,8 +215,8 @@ export default function StopDetailPage({
         visited_at: new Date().toISOString(),
         rating,
         wifi_signal: wifiSignal,
-        products_found: products.length,
-        estimated_profit: totalProfit,
+        products_found: totalItemsBought || products.length,
+        estimated_profit: finalProfit,
         total_spent: totalSpent,
         total_items_bought: totalItemsBought,
         receipt_photo_urls: receiptUrls,
