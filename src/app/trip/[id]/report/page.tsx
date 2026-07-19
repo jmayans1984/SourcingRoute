@@ -13,16 +13,25 @@ import {
   Package,
   DollarSign,
   SkipForward,
+  TrendingUp,
+  Wallet,
 } from 'lucide-react';
 
 interface StopWithStore extends TripStop {
   store: Store;
 }
 
+interface TripExpense {
+  id: string;
+  category_name: string;
+  amount: number;
+}
+
 export default function TripReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [trip, setTrip] = useState<SourcingTrip | null>(null);
   const [stops, setStops] = useState<StopWithStore[]>([]);
+  const [expenses, setExpenses] = useState<TripExpense[]>([]);
 
   useEffect(() => {
     loadReport();
@@ -31,14 +40,20 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
   async function loadReport() {
     const supabase = createClient();
 
-    const [{ data: tripData }, { data: stopsData }] = await Promise.all([
+    const [{ data: tripData }, { data: stopsData }, { data: expensesData }] = await Promise.all([
       supabase.from('sourcing_trips').select('*').eq('id', id).single(),
       supabase
         .from('trip_stops')
         .select('*, store:stores(*)')
         .eq('trip_id', id)
         .order('stop_order', { ascending: true }),
+      supabase
+        .from('trip_expenses')
+        .select('id, category_name, amount')
+        .eq('trip_id', id),
     ]);
+
+    if (expensesData) setExpenses(expensesData);
 
     if (tripData) {
       setTrip(tripData);
@@ -66,6 +81,16 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
   const visitedStops = stops.filter((s) => s.status === 'completed');
   const totalSpent = visitedStops.reduce((sum, s) => sum + (s.total_spent || 0), 0);
   const totalItemsBought = visitedStops.reduce((sum, s) => sum + (s.total_items_bought || 0), 0);
+  const totalProfit = visitedStops.reduce((sum, s) => sum + (s.estimated_profit || 0), 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const realProfit = totalProfit - totalExpenses;
+  const roiPercent = totalSpent > 0 ? Math.round((realProfit / totalSpent) * 100) : 0;
+
+  // Group expenses by category for the P&L breakdown
+  const expensesByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+    acc[e.category_name] = (acc[e.category_name] ?? 0) + (e.amount || 0);
+    return acc;
+  }, {});
 
   const topSpendStore = visitedStops.length > 0
     ? visitedStops.reduce((top, s) => ((s.total_spent || 0) > (top.total_spent || 0) ? s : top))
@@ -107,6 +132,56 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
             <p className="text-xs text-text-muted">Total Spent</p>
           </Card>
         </div>
+
+        {/* P&L: product profit − route expenses = real profit */}
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp size={18} className="text-green-600" />
+            <CardTitle>Resultado de la Ruta</CardTitle>
+          </div>
+
+          <div className="space-y-1.5 text-sm">
+            <div className="flex justify-between text-text-secondary">
+              <span>Utilidad proyectada (productos)</span>
+              <span className="font-medium">
+                ${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            {Object.entries(expensesByCategory).map(([name, amount]) => (
+              <div key={name} className="flex justify-between text-text-secondary">
+                <span className="flex items-center gap-1.5">
+                  <Wallet size={12} className="text-amber-600" />
+                  {name}
+                </span>
+                <span className="text-danger">
+                  −${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            ))}
+
+            {totalExpenses > 0 && (
+              <div className="flex justify-between border-t border-border pt-1.5 text-text-secondary">
+                <span>Total gastos de ruta</span>
+                <span className="font-medium text-danger">
+                  −${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between rounded-xl bg-surface-secondary px-3 py-2.5 mt-2">
+              <span className="font-bold">Utilidad Real</span>
+              <div className="text-right">
+                <p className={`text-lg font-bold leading-tight ${realProfit >= 0 ? 'text-green-600' : 'text-danger'}`}>
+                  ${realProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </p>
+                {roiPercent !== 0 && (
+                  <p className="text-xs text-text-muted">{roiPercent}% ROI sobre lo gastado</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
 
         {/* Top spending store */}
         {topSpendStore && (

@@ -11,7 +11,14 @@ import { Input } from '@/components/ui/input';
 import { CustomChainsInput } from '@/components/route/custom-chains-input';
 import { LocationInput } from '@/components/route/location-input';
 import type { UserProfile } from '@/types/database';
-import { Save, LogOut, FileSpreadsheet } from 'lucide-react';
+import { Save, LogOut, FileSpreadsheet, Wallet, Plus, Trash2 } from 'lucide-react';
+
+interface ExpenseCategory {
+  id: string;
+  name: string;
+}
+
+const SUGGESTED_CATEGORIES = ['Gasolina', 'Peajes', 'Hotel', 'Alimentación', 'Parqueadero', 'Otros'];
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -26,6 +33,8 @@ export default function ProfilePage() {
     preferred_chains: [],
   });
   const [googleSheetId, setGoogleSheetId] = useState('');
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
     loadProfile();
@@ -35,6 +44,13 @@ export default function ProfilePage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    const { data: cats } = await supabase
+      .from('expense_categories')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .order('name');
+    if (cats) setCategories(cats);
 
     const { data: existing } = await supabase
       .from('users_profile')
@@ -80,6 +96,36 @@ export default function ProfilePage() {
     }
 
     setSaving(false);
+  }
+
+  async function addCategory(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
+      setNewCategory('');
+      return;
+    }
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('expense_categories')
+      .insert({ user_id: user.id, name: trimmed })
+      .select('id, name')
+      .single();
+
+    if (data) {
+      setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    }
+    setNewCategory('');
+  }
+
+  async function removeCategory(catId: string) {
+    const supabase = createClient();
+    await supabase.from('expense_categories').delete().eq('id', catId);
+    setCategories((prev) => prev.filter((c) => c.id !== catId));
   }
 
   async function handleSignOut() {
@@ -168,6 +214,83 @@ export default function ProfilePage() {
               <span className="font-mono text-primary">docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit</span>
             </p>
           </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center gap-2">
+            <Wallet size={18} className="text-amber-600" />
+            <CardTitle>Cuentas Contables — Gastos de Ruta</CardTitle>
+          </div>
+          <p className="mt-1 text-xs text-text-muted">
+            Categorías para registrar gastos de la ruta (gasolina, peajes, hotel...). Se restan de la utilidad para calcular la utilidad real.
+          </p>
+
+          <div className="mt-3 flex gap-2">
+            <Input
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addCategory(newCategory);
+                }
+              }}
+              placeholder="Nueva categoría..."
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => addCategory(newCategory)}
+              className="shrink-0 gap-1"
+            >
+              <Plus size={16} />
+              Agregar
+            </Button>
+          </div>
+
+          {categories.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <span
+                  key={cat.id}
+                  className="flex items-center gap-1.5 rounded-full border border-border bg-surface-secondary px-3 py-1.5 text-sm"
+                >
+                  {cat.name}
+                  <button
+                    type="button"
+                    onClick={() => removeCategory(cat.id)}
+                    className="text-text-muted hover:text-danger"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Quick-add suggestions for categories not yet created */}
+          {SUGGESTED_CATEGORIES.filter(
+            (s) => !categories.some((c) => c.name.toLowerCase() === s.toLowerCase())
+          ).length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs text-text-muted mb-1.5">Sugerencias:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_CATEGORIES.filter(
+                  (s) => !categories.some((c) => c.name.toLowerCase() === s.toLowerCase())
+                ).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => addCategory(s)}
+                    className="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-text-muted transition-colors hover:border-primary hover:text-primary"
+                  >
+                    + {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
 
         <Card>

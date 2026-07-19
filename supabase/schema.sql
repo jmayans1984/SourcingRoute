@@ -242,3 +242,42 @@ create policy "Users can delete own receipts"
 on storage.objects for delete
 to authenticated
 using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Expense categories (cuentas contables) — user-defined: Gasolina, Tolls, Hotel, etc.
+create table expense_categories (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  name text not null,
+  created_at timestamptz default now()
+);
+
+alter table expense_categories enable row level security;
+
+create policy "Users can view own expense categories" on expense_categories for select using (auth.uid() = user_id);
+create policy "Users can insert own expense categories" on expense_categories for insert with check (auth.uid() = user_id);
+create policy "Users can update own expense categories" on expense_categories for update using (auth.uid() = user_id);
+create policy "Users can delete own expense categories" on expense_categories for delete using (auth.uid() = user_id);
+
+create index idx_expense_categories_user on expense_categories(user_id);
+
+-- Trip expenses — route-level costs subtracted from product profit to get real profit
+create table trip_expenses (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  trip_id uuid references sourcing_trips(id) on delete cascade not null,
+  category_id uuid references expense_categories(id) on delete set null,
+  category_name text not null,
+  amount double precision not null default 0,
+  notes text,
+  created_at timestamptz default now()
+);
+
+alter table trip_expenses enable row level security;
+
+create policy "Users can view own trip expenses" on trip_expenses for select using (auth.uid() = user_id);
+create policy "Users can insert own trip expenses" on trip_expenses for insert with check (auth.uid() = user_id);
+create policy "Users can update own trip expenses" on trip_expenses for update using (auth.uid() = user_id);
+create policy "Users can delete own trip expenses" on trip_expenses for delete using (auth.uid() = user_id);
+
+create index idx_trip_expenses_user on trip_expenses(user_id);
+create index idx_trip_expenses_trip on trip_expenses(trip_id);

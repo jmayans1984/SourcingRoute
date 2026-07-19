@@ -36,7 +36,10 @@ import {
   Search,
   X,
   Loader2,
+  Wallet,
+  Plus,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface StopWithStore extends TripStop {
   store: Store;
@@ -49,6 +52,18 @@ interface GroupedProduct {
   totalCost: number;
   totalProfit: number;
   stores: string[];
+}
+
+interface TripExpense {
+  id: string;
+  category_name: string;
+  amount: number;
+  notes: string | null;
+}
+
+interface ExpenseCategory {
+  id: string;
+  name: string;
 }
 
 export default function TripPage({ params }: { params: Promise<{ id: string }> }) {
@@ -65,6 +80,12 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
   const [showProducts, setShowProducts] = useState(false);
   const [tripProducts, setTripProducts] = useState<GroupedProduct[] | null>(null);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  // Route-level expenses (gas, tolls, hotel...) subtracted from product profit
+  const [expenses, setExpenses] = useState<TripExpense[]>([]);
+  const [expCategories, setExpCategories] = useState<ExpenseCategory[]>([]);
+  const [expCategoryId, setExpCategoryId] = useState('');
+  const [expAmount, setExpAmount] = useState('');
+  const [addingExpense, setAddingExpense] = useState(false);
 
   useEffect(() => {
     loadTrip();
@@ -75,16 +96,34 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    const [{ data: tripData }, { data: stopsData }] = await Promise.all([
-      supabase.from('sourcing_trips').select('*').eq('id', id).single(),
-      supabase
-        .from('trip_stops')
-        .select('*, store:stores(*)')
-        .eq('trip_id', id)
-        .order('stop_order', { ascending: true }),
-    ]);
+    const [{ data: tripData }, { data: stopsData }, { data: expensesData }, { data: catsData }] =
+      await Promise.all([
+        supabase.from('sourcing_trips').select('*').eq('id', id).single(),
+        supabase
+          .from('trip_stops')
+          .select('*, store:stores(*)')
+          .eq('trip_id', id)
+          .order('stop_order', { ascending: true }),
+        supabase
+          .from('trip_expenses')
+          .select('id, category_name, amount, notes')
+          .eq('trip_id', id)
+          .order('created_at', { ascending: true }),
+        user
+          ? supabase
+              .from('expense_categories')
+              .select('id, name')
+              .eq('user_id', user.id)
+              .order('name')
+          : Promise.resolve({ data: null }),
+      ]);
 
     if (tripData) setTrip(tripData);
+    if (expensesData) setExpenses(expensesData);
+    if (catsData) {
+      setExpCategories(catsData);
+      if (catsData.length > 0) setExpCategoryId((prev) => prev || catsData[0].id);
+    }
     if (stopsData) {
       setStops(stopsData as StopWithStore[]);
 
@@ -120,6 +159,44 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       }
     }
     setLoading(false);
+  }
+
+  async function addExpense() {
+    const amount = parseFloat(expAmount);
+    const category = expCategories.find((c) => c.id === expCategoryId);
+    if (!category || !amount || amount <= 0) return;
+
+    setAddingExpense(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setAddingExpense(false);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('trip_expenses')
+      .insert({
+        user_id: user.id,
+        trip_id: id,
+        category_id: category.id,
+        category_name: category.name,
+        amount,
+      })
+      .select('id, category_name, amount, notes')
+      .single();
+
+    if (data) {
+      setExpenses((prev) => [...prev, data]);
+      setExpAmount('');
+    }
+    setAddingExpense(false);
+  }
+
+  async function deleteExpense(expenseId: string) {
+    const supabase = createClient();
+    await supabase.from('trip_expenses').delete().eq('id', expenseId);
+    setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
   }
 
   async function openProducts() {
@@ -313,7 +390,9 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
   const totalItemsBought = stops.reduce((sum, s) => sum + (s.total_items_bought || 0), 0);
   const totalSpent = stops.reduce((sum, s) => sum + (s.total_spent || 0), 0);
   const totalProfit = stops.reduce((sum, s) => sum + (s.estimated_profit || 0), 0);
-  const roiPercent = totalSpent > 0 ? Math.round((totalProfit / totalSpent) * 100) : 0;
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const realProfit = totalProfit - totalExpenses;
+  const roiPercent = totalSpent > 0 ? Math.round((realProfit / totalSpent) * 100) : 0;
   const progressPct = stops.length > 0 ? Math.round((completedStops / stops.length) * 100) : 0;
 
   return (
@@ -383,14 +462,14 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
             <p className="text-[11px] text-text-muted">Gastado</p>
           </Card>
           <Card className="!p-3 text-center">
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-green-50 text-green-600">
+            <div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full ${realProfit >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-danger'}`}>
               <TrendingUp size={15} />
             </div>
-            <p className="mt-1.5 text-lg font-bold leading-tight text-green-600">
-              ${totalProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            <p className={`mt-1.5 text-lg font-bold leading-tight ${realProfit >= 0 ? 'text-green-600' : 'text-danger'}`}>
+              ${realProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
             <p className="text-[11px] text-text-muted">
-              Utilidad{roiPercent > 0 ? ` · ${roiPercent}% ROI` : ''}
+              Utilidad Real{roiPercent !== 0 ? ` · ${roiPercent}% ROI` : ''}
             </p>
           </Card>
         </div>
@@ -427,6 +506,109 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
               <p className="text-[10px] text-text-muted">Total</p>
             </div>
           </div>
+        </Card>
+
+        {/* Route expenses — subtracted from product profit for real profit */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wallet size={16} className="text-amber-600" />
+              <p className="text-sm font-semibold">Gastos de Ruta</p>
+            </div>
+            {totalExpenses > 0 && (
+              <span className="text-sm font-bold text-danger">
+                −${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </span>
+            )}
+          </div>
+
+          {expenses.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {expenses.map((exp) => (
+                <div
+                  key={exp.id}
+                  className="flex items-center justify-between rounded-lg bg-surface-secondary px-3 py-2 text-sm"
+                >
+                  <span className="font-medium">{exp.category_name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-danger">
+                      −${exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                    <button
+                      onClick={() => deleteExpense(exp.id)}
+                      className="text-text-muted hover:text-danger"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {expCategories.length === 0 ? (
+            <p className="mt-3 text-xs text-text-muted">
+              No tienes cuentas contables.{' '}
+              <Link href="/profile" className="font-medium text-primary hover:underline">
+                Créalas en tu perfil
+              </Link>{' '}
+              (Gasolina, Peajes, Hotel...).
+            </p>
+          ) : (
+            <div className="mt-3 flex gap-2">
+              <select
+                value={expCategoryId}
+                onChange={(e) => setExpCategoryId(e.target.value)}
+                className="h-11 flex-1 rounded-xl border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                {expCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={expAmount}
+                onChange={(e) => setExpAmount(e.target.value)}
+                placeholder="$0.00"
+                className="!w-24 shrink-0"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={addExpense}
+                loading={addingExpense}
+                disabled={!expAmount || parseFloat(expAmount) <= 0}
+                className="h-11 shrink-0 gap-1"
+              >
+                <Plus size={15} />
+              </Button>
+            </div>
+          )}
+
+          {(totalExpenses > 0 || totalProfit > 0) && (
+            <div className="mt-3 space-y-1 rounded-xl border border-border p-3 text-sm">
+              <div className="flex justify-between text-text-secondary">
+                <span>Utilidad productos</span>
+                <span>${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-text-secondary">
+                <span>Gastos de ruta</span>
+                <span className="text-danger">
+                  −${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1 font-bold">
+                <span>Utilidad Real</span>
+                <span className={realProfit >= 0 ? 'text-green-600' : 'text-danger'}>
+                  ${realProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Route map - full width */}
