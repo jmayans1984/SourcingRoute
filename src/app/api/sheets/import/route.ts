@@ -112,6 +112,7 @@ export async function GET(req: NextRequest) {
 
     const products = rows.map((row) => ({
       product_name: row[1] ?? '',
+      asin:                 row[2] ?? '',
       buy_cost:             toNumber(row[COL.COST_PRICE]),
       estimated_sale_price: toNumber(row[COL.SALE_PRICE]),
       quantity_found:  Math.round(toNumber(row[COL.QUANTITY])),
@@ -188,6 +189,7 @@ export async function POST(req: NextRequest) {
 
     const products = rows.map((row) => ({
       product_name: row[1] ?? '',
+      asin:                 row[2] ?? '',
       buy_cost:             toNumber(row[COL.COST_PRICE]),
       estimated_sale_price: toNumber(row[COL.SALE_PRICE]),
       quantity_found:  Math.round(toNumber(row[COL.QUANTITY])),

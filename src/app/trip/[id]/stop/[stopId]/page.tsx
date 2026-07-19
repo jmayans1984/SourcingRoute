@@ -34,6 +34,7 @@ interface StopWithStore extends TripStop {
 
 interface ProductEntry {
   product_name: string;
+  asin?: string;
   buy_cost: number;
   estimated_sale_price: number;
   quantity_found: number;
@@ -75,6 +76,7 @@ export default function StopDetailPage({
   const [products, setProducts] = useState<ProductEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [historicalQty, setHistoricalQty] = useState<Record<string, number>>({});
   const [projectedProfit, setProjectedProfit] = useState<number>(0);
   const [projectedSales, setProjectedSales] = useState<number>(0);
   const [importResult, setImportResult] = useState<{
@@ -141,12 +143,31 @@ export default function StopDetailPage({
       setImportResult(data);
       if (data.products?.length > 0) {
         setProducts(data.products);
+        await loadHistoricalQty(data.products.map((p: ProductEntry) => p.product_name));
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al importar del Sheet');
     } finally {
       setImporting(false);
     }
+  }
+
+  async function loadHistoricalQty(names: string[]) {
+    if (!stop || names.length === 0) return;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('found_products')
+      .select('product_name, quantity_bought')
+      .eq('store_id', stop.store.id)
+      .neq('trip_id', id)
+      .in('product_name', names);
+
+    if (!data) return;
+    const totals: Record<string, number> = {};
+    for (const row of data) {
+      totals[row.product_name] = (totals[row.product_name] ?? 0) + (row.quantity_bought ?? 0);
+    }
+    setHistoricalQty(totals);
   }
 
   function addProduct() {
@@ -520,105 +541,51 @@ export default function StopDetailPage({
         </Card>
 
         {/* Products */}
-        <Card>
-          <div className="flex items-center justify-between">
-            <CardTitle>Products Found</CardTitle>
-            <Button size="sm" variant="outline" onClick={addProduct} className="gap-1">
-              <Plus size={14} />
-              Add
-            </Button>
-          </div>
-
-          {products.length === 0 && (
-            <p className="mt-2 text-sm text-text-muted">
-              No products added yet. Tap &quot;Add&quot; to log a find.
+        {products.length > 0 && (
+          <Card>
+            <CardTitle>Productos Importados</CardTitle>
+            <p className="text-xs text-text-muted mt-0.5">
+              Hist. = unidades compradas de este producto en visitas anteriores a esta tienda.
             </p>
-          )}
-
-          <div className="mt-2 space-y-4">
-            {products.map((product, index) => (
-              <div key={index} className="space-y-2 rounded-xl border border-border p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-text-secondary">
-                    Product #{index + 1}
-                  </span>
-                  <button
-                    onClick={() => removeProduct(index)}
-                    className="text-text-muted hover:text-danger"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                <Input
-                  placeholder="Product name"
-                  value={product.product_name}
-                  onChange={(e) => updateProduct(index, { product_name: e.target.value })}
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    label="Buy Cost"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={product.buy_cost || ''}
-                    onChange={(e) => updateProduct(index, { buy_cost: Number(e.target.value) })}
-                    placeholder="$0.00"
-                  />
-                  <Input
-                    label="Sale Price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={product.estimated_sale_price || ''}
-                    onChange={(e) =>
-                      updateProduct(index, { estimated_sale_price: Number(e.target.value) })
-                    }
-                    placeholder="$0.00"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    label="Qty Found"
-                    type="number"
-                    min="0"
-                    value={product.quantity_found}
-                    onChange={(e) =>
-                      updateProduct(index, { quantity_found: Number(e.target.value) })
-                    }
-                  />
-                  <Input
-                    label="Qty Bought"
-                    type="number"
-                    min="0"
-                    value={product.quantity_bought}
-                    onChange={(e) =>
-                      updateProduct(index, { quantity_bought: Number(e.target.value) })
-                    }
-                  />
-                </div>
-                {product.buy_cost > 0 && product.estimated_sale_price > 0 && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="text-secondary font-medium">
-                      Profit: $
-                      {(
-                        (product.estimated_sale_price - product.buy_cost) *
-                        product.quantity_bought
-                      ).toFixed(2)}
-                    </span>
-                    <span className="text-text-muted">
-                      ROI:{' '}
-                      {Math.round(
-                        ((product.estimated_sale_price - product.buy_cost) / product.buy_cost) *
-                          100
-                      )}
-                      %
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
+            <div className="mt-3 overflow-x-auto -mx-4 px-4">
+              <table className="w-full text-xs min-w-[480px]">
+                <thead>
+                  <tr className="border-b border-border text-text-muted">
+                    <th className="pb-2 text-left font-medium">Producto</th>
+                    <th className="pb-2 text-right font-medium">Costo</th>
+                    <th className="pb-2 text-right font-medium">Venta</th>
+                    <th className="pb-2 text-right font-medium">Qty</th>
+                    <th className="pb-2 text-right font-medium">Hist.</th>
+                    <th className="pb-2 text-right font-medium">Utilidad</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {products.map((p, i) => {
+                    const profit = (p.estimated_sale_price - p.buy_cost) * p.quantity_bought;
+                    const hist = historicalQty[p.product_name] ?? 0;
+                    return (
+                      <tr key={i} className="text-text">
+                        <td className="py-2 pr-3 max-w-[160px]">
+                          <p className="truncate font-medium">{p.product_name}</p>
+                          {p.asin && <p className="text-text-muted truncate">{p.asin}</p>}
+                        </td>
+                        <td className="py-2 text-right">${p.buy_cost.toFixed(2)}</td>
+                        <td className="py-2 text-right">${p.estimated_sale_price.toFixed(2)}</td>
+                        <td className="py-2 text-right font-medium">{p.quantity_bought}</td>
+                        <td className={`py-2 text-right font-semibold ${hist > 0 ? 'text-amber-600' : 'text-text-muted'}`}>
+                          {hist > 0 ? hist : '—'}
+                        </td>
+                        <td className={`py-2 text-right font-medium ${profit > 0 ? 'text-green-600' : 'text-danger'}`}>
+                          ${profit.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         <Button fullWidth size="lg" onClick={saveAndComplete} loading={saving} className="gap-2">
           <Save size={18} />
