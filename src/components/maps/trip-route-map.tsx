@@ -17,9 +17,9 @@ interface TripRouteMapProps {
 }
 
 const POLYLINE_COLOR = '#2563eb'; // primary blue
-const START_ICON = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
-const STOP_ICON = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-const END_ICON = 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';
+const START_ICON = 'https://maps.google.com/mapfiles/ms/icons/green-dot.png';
+const STOP_ICON = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+const END_ICON = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
 
 declare global {
   interface Window {
