@@ -109,6 +109,24 @@ export default function StopDetailPage({
     }
   }
 
+  function handleSpentChange(val: number) {
+    setTotalSpent(val);
+    if (importResult && importResult.totalSpent > 0) {
+      const ratio = val / importResult.totalSpent;
+      setProjectedSales(Math.round(importResult.projectedSales * ratio * 100) / 100);
+      setProjectedProfit(Math.round(importResult.projectedProfit * ratio * 100) / 100);
+    }
+  }
+
+  function handleItemsChange(val: number) {
+    setTotalItemsBought(val);
+    if (importResult && importResult.totalItems > 0) {
+      const ratio = val / importResult.totalItems;
+      setProjectedSales(Math.round(importResult.projectedSales * ratio * 100) / 100);
+      setProjectedProfit(Math.round(importResult.projectedProfit * ratio * 100) / 100);
+    }
+  }
+
   async function importFromSheets() {
     setImporting(true);
     try {
@@ -406,7 +424,7 @@ export default function StopDetailPage({
               step="0.01"
               min="0"
               value={totalSpent || ''}
-              onChange={(e) => setTotalSpent(Number(e.target.value))}
+              onChange={(e) => handleSpentChange(Number(e.target.value))}
               placeholder="$0.00"
             />
             <Input
@@ -414,7 +432,7 @@ export default function StopDetailPage({
               type="number"
               min="0"
               value={totalItemsBought || ''}
-              onChange={(e) => setTotalItemsBought(Number(e.target.value))}
+              onChange={(e) => handleItemsChange(Number(e.target.value))}
               placeholder="0"
             />
             <Input
