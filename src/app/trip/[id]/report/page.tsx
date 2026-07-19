@@ -27,11 +27,21 @@ interface TripExpense {
   amount: number;
 }
 
+interface GroupedProduct {
+  code: string;
+  product_name: string;
+  quantity: number;
+  totalCost: number;
+  totalSales: number;
+  totalProfit: number;
+}
+
 export default function TripReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [trip, setTrip] = useState<SourcingTrip | null>(null);
   const [stops, setStops] = useState<StopWithStore[]>([]);
   const [expenses, setExpenses] = useState<TripExpense[]>([]);
+  const [products, setProducts] = useState<GroupedProduct[]>([]);
 
   useEffect(() => {
     loadReport();
@@ -40,20 +50,56 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
   async function loadReport() {
     const supabase = createClient();
 
-    const [{ data: tripData }, { data: stopsData }, { data: expensesData }] = await Promise.all([
-      supabase.from('sourcing_trips').select('*').eq('id', id).single(),
-      supabase
-        .from('trip_stops')
-        .select('*, store:stores(*)')
-        .eq('trip_id', id)
-        .order('stop_order', { ascending: true }),
-      supabase
-        .from('trip_expenses')
-        .select('id, category_name, amount')
-        .eq('trip_id', id),
-    ]);
+    const [{ data: tripData }, { data: stopsData }, { data: expensesData }, { data: productsData }] =
+      await Promise.all([
+        supabase.from('sourcing_trips').select('*').eq('id', id).single(),
+        supabase
+          .from('trip_stops')
+          .select('*, store:stores(*)')
+          .eq('trip_id', id)
+          .order('stop_order', { ascending: true }),
+        supabase
+          .from('trip_expenses')
+          .select('id, category_name, amount')
+          .eq('trip_id', id),
+        supabase
+          .from('found_products')
+          .select('product_name, upc, quantity_bought, buy_cost, estimated_sale_price, estimated_profit')
+          .eq('trip_id', id),
+      ]);
 
     if (expensesData) setExpenses(expensesData);
+
+    // Group products by UPC/code
+    if (productsData && productsData.length > 0) {
+      const grouped = new Map<string, GroupedProduct>();
+      for (const row of productsData as any[]) {
+        const code = row.upc || row.product_name;
+        const qty = row.quantity_bought ?? 0;
+        const cost = row.buy_cost ?? 0;
+        const sale = row.estimated_sale_price ?? 0;
+        const profit = row.estimated_profit ?? 0;
+
+        const existing = grouped.get(code);
+        if (existing) {
+          existing.quantity += qty;
+          existing.totalCost += cost * qty;
+          existing.totalSales += sale * qty;
+          existing.totalProfit += profit;
+        } else {
+          grouped.set(code, {
+            code,
+            product_name: row.product_name,
+            quantity: qty,
+            totalCost: cost * qty,
+            totalSales: sale * qty,
+            totalProfit: profit,
+          });
+        }
+      }
+      const sorted = Array.from(grouped.values()).sort((a, b) => b.quantity - a.quantity);
+      setProducts(sorted);
+    }
 
     if (tripData) {
       setTrip(tripData);
@@ -195,6 +241,74 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
               ${(topSpendStore.total_spent || 0).toFixed(0)} spent ·{' '}
               {topSpendStore.total_items_bought || 0} items
             </p>
+          </Card>
+        )}
+
+        {/* Products table */}
+        {products.length > 0 && (
+          <Card>
+            <CardTitle>Productos Comprados</CardTitle>
+            <div className="mt-3 overflow-x-auto -mx-4 px-4">
+              <table className="w-full text-xs min-w-[500px]">
+                <thead>
+                  <tr className="border-b border-border text-text-muted">
+                    <th className="pb-2 text-left font-medium">Producto</th>
+                    <th className="pb-2 text-right font-medium">Qty</th>
+                    <th className="pb-2 text-right font-medium">COGS</th>
+                    <th className="pb-2 text-right font-medium">Venta</th>
+                    <th className="pb-2 text-right font-medium">Utilidad</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {products.map((p) => (
+                    <tr key={p.code} className="text-text">
+                      <td className="py-2 pr-3 max-w-[160px]">
+                        <p className="truncate font-medium">{p.product_name}</p>
+                        {p.code && <p className="text-text-muted truncate text-[10px]">{p.code}</p>}
+                      </td>
+                      <td className="py-2 text-right font-semibold">{p.quantity}</td>
+                      <td className="py-2 text-right">
+                        ${p.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2 text-right">
+                        ${p.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td
+                        className={`py-2 text-right font-medium ${
+                          p.totalProfit >= 0 ? 'text-green-600' : 'text-danger'
+                        }`}
+                      >
+                        ${p.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="border-t-2 border-border font-bold text-text">
+                    <td className="py-2 pr-3">Total</td>
+                    <td className="py-2 text-right">
+                      {products.reduce((s, p) => s + p.quantity, 0)}
+                    </td>
+                    <td className="py-2 text-right">
+                      $
+                      {products
+                        .reduce((s, p) => s + p.totalCost, 0)
+                        .toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2 text-right">
+                      $
+                      {products
+                        .reduce((s, p) => s + p.totalSales, 0)
+                        .toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2 text-right text-green-600">
+                      $
+                      {products
+                        .reduce((s, p) => s + p.totalProfit, 0)
+                        .toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </Card>
         )}
 
