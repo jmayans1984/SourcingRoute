@@ -13,7 +13,25 @@ const COL = {
 
 function toNumber(val: string | undefined): number {
   if (!val) return 0;
-  return parseFloat(val.toString().replace(/[$,%]/g, '')) || 0;
+  let s = val.toString().trim().replace(/[$%]/g, '');
+
+  // Detect European decimal format (e.g. "12,99" or "1.234,56")
+  // vs US format (e.g. "1,234.56")
+  const hasComma = s.includes(',');
+  const hasDot   = s.includes('.');
+
+  if (hasComma && !hasDot) {
+    // Pure European: "12,99" → "12.99"
+    s = s.replace(',', '.');
+  } else if (hasComma && hasDot) {
+    // European with thousands: "1.234,56" → "1234.56"
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else {
+    // US format or plain number — remove thousands commas
+    s = s.replace(/,/g, '');
+  }
+
+  return parseFloat(s) || 0;
 }
 
 function getAuth() {
