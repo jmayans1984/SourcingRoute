@@ -153,13 +153,14 @@ export default function StopDetailPage({
   }
 
   async function loadHistoricalQty(names: string[]) {
-    if (!stop || names.length === 0) return;
+    if (names.length === 0) return;
     const supabase = createClient();
+    // Sum units bought of each product at OTHER stops within this same trip
     const { data } = await supabase
       .from('found_products')
       .select('product_name, quantity_bought')
-      .eq('store_id', stop.store.id)
-      .neq('trip_id', id)
+      .eq('trip_id', id)
+      .neq('trip_stop_id', stopId)
       .in('product_name', names);
 
     if (!data) return;
@@ -545,7 +546,7 @@ export default function StopDetailPage({
           <Card>
             <CardTitle>Productos Importados</CardTitle>
             <p className="text-xs text-text-muted mt-0.5">
-              Hist. = unidades compradas de este producto en visitas anteriores a esta tienda.
+              Hist. = unidades de este producto ya compradas en otras tiendas de esta misma ruta.
             </p>
             <div className="mt-3 overflow-x-auto -mx-4 px-4">
               <table className="w-full text-xs min-w-[480px]">
