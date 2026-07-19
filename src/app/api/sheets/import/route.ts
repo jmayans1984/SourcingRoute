@@ -18,11 +18,18 @@ function toNumber(val: string | undefined): number {
 
 function getAuth() {
   const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-  const privateKey  = process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const rawKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY;
 
-  if (!clientEmail || !privateKey) {
+  if (!clientEmail || !rawKey) {
     throw new Error('Google Sheets credentials not configured');
   }
+
+  // Vercel stores env vars as strings — newlines may be escaped as \n or \\n.
+  // Normalize to actual newline characters so the PEM parser accepts the key.
+  const privateKey = rawKey
+    .replace(/\\n/g, '\n')   // literal \n → newline
+    .replace(/\\\\n/g, '\n') // double-escaped \\n → newline
+    .trim();
 
   return new google.auth.JWT({
     email: clientEmail,
