@@ -22,6 +22,11 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
+  Sparkles,
+  Wallet,
+  Calendar,
+  Clock,
+  ChevronRight,
 } from 'lucide-react';
 import type { SourcingTrip } from '@/types/database';
 
@@ -42,10 +47,17 @@ interface TripTotals {
 type PeriodFilter = 'week' | 'month' | 'year' | 'all';
 
 const PERIOD_LABELS: Record<PeriodFilter, string> = {
+  week: 'Semana',
+  month: 'Mes',
+  year: 'Año',
+  all: 'Todo',
+};
+
+const PERIOD_LONG: Record<PeriodFilter, string> = {
   week: 'Esta Semana',
   month: 'Este Mes',
   year: 'Este Año',
-  all: 'Todo',
+  all: 'Histórico',
 };
 
 function getStartOfWeek(): Date {
@@ -92,6 +104,32 @@ function getPreviousPeriodStart(period: PeriodFilter): { start: Date; end: Date 
   return null;
 }
 
+// Delta pill: green when improving, amber when declining
+function DeltaPill({
+  current,
+  prev,
+  invert = false,
+}: {
+  current: number;
+  prev: number;
+  invert?: boolean;
+}) {
+  if (prev <= 0) return null;
+  const up = current >= prev;
+  const good = invert ? !up : up;
+  const pct = Math.abs(Math.round(((current - prev) / prev) * 100));
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+        good ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+      }`}
+    >
+      {up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+      {pct}%
+    </span>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [trips, setTrips] = useState<SourcingTrip[]>([]);
@@ -111,12 +149,6 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboard();
   }, []);
-
-  // Re-render when period changes (calculations are re-run)
-  useEffect(() => {
-    // This effect just triggers a re-render when period changes
-    // All the filtering and calculations happen in the component body
-  }, [period]);
 
   async function loadDashboard() {
     const supabase = createClient();
@@ -244,7 +276,6 @@ export default function DashboardPage() {
   let prevTotalSpent = 0;
   let prevTotalItems = 0;
   let prevTotalStores = 0;
-  let prevTotalProfit = 0;
 
   if (prevPeriod && period !== 'all') {
     const prevTrips = trips.filter((t) => {
@@ -259,169 +290,118 @@ export default function DashboardPage() {
     );
   }
 
-  // Calculate current period profit (from store_visits within date range)
-  const currentPeriodProfit = filteredTrips.length > 0 ? stats.totalProfit : 0;
-  // Rough estimate: use the ratio of current spent to all-time spent for profit
+  // Profit estimate: spend ratio vs all-time profit
   const allTimeSpent = trips.reduce((sum, t) => sum + (tripTotals[t.id]?.spent || 0), 0);
   const profitRatio = allTimeSpent > 0 ? stats.totalProfit / allTimeSpent : 0;
   const estimatedCurrentProfit = filteredTotalSpent * profitRatio;
   const estimatedPrevProfit = prevTotalSpent * profitRatio;
 
+  const today = new Date().toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  const kpis = [
+    {
+      label: 'Tiendas Visitadas',
+      value: `${filteredTotalStores}`,
+      icon: Store,
+      chip: 'bg-gradient-to-br from-violet-500 to-purple-600',
+      glow: 'shadow-violet-500/20',
+      cur: filteredTotalStores,
+      prev: prevTotalStores,
+      prevLabel: prevTotalStores > 0 ? `vs ${prevTotalStores} anterior` : null,
+      invert: false,
+    },
+    {
+      label: 'Ganancia Estimada',
+      value: `$${Math.round(estimatedCurrentProfit).toLocaleString()}`,
+      icon: TrendingUp,
+      chip: 'bg-gradient-to-br from-emerald-500 to-teal-600',
+      glow: 'shadow-emerald-500/20',
+      cur: estimatedCurrentProfit,
+      prev: estimatedPrevProfit,
+      prevLabel:
+        estimatedPrevProfit > 0
+          ? `vs $${Math.round(estimatedPrevProfit).toLocaleString()} anterior`
+          : null,
+      invert: false,
+    },
+    {
+      label: 'Artículos',
+      value: `${filteredTotalItems}`,
+      icon: Package,
+      chip: 'bg-gradient-to-br from-sky-500 to-blue-600',
+      glow: 'shadow-sky-500/20',
+      cur: filteredTotalItems,
+      prev: prevTotalItems,
+      prevLabel: prevTotalItems > 0 ? `vs ${prevTotalItems} anterior` : null,
+      invert: false,
+    },
+    {
+      label: 'Gastado',
+      value: `$${filteredTotalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+      icon: Wallet,
+      chip: 'bg-gradient-to-br from-orange-500 to-amber-600',
+      glow: 'shadow-orange-500/20',
+      cur: filteredTotalSpent,
+      prev: prevTotalSpent,
+      prevLabel:
+        prevTotalSpent > 0 ? `vs $${prevTotalSpent.toLocaleString()} anterior` : null,
+      invert: true,
+    },
+  ];
+
   return (
     <>
       <Header title="SourcingRoute" />
 
-      <div className="space-y-4 p-4 md:p-0">
-        <div className="md:flex md:items-center md:justify-between">
-          <div>
-            <h2 className="text-xl font-bold">Hey, {userName}!</h2>
-            <p className="text-sm text-text-secondary">Ready to source today?</p>
+      <div className="space-y-5 p-4 md:p-0">
+        {/* Hero banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 p-5 text-white shadow-xl shadow-indigo-500/25 md:p-7">
+          {/* decorative blobs */}
+          <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-20 right-24 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute -left-10 -bottom-10 h-40 w-40 rounded-full bg-cyan-300/10 blur-2xl" />
+
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-blue-100/80">
+                <Calendar size={13} />
+                {today}
+              </p>
+              <h2 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
+                Hey, {userName} <span className="align-middle">👋</span>
+              </h2>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-blue-100">
+                <Sparkles size={14} className="text-amber-300" />
+                Listo para hacer sourcing hoy?
+              </p>
+            </div>
+
+            <Link href="/route/create" className="shrink-0">
+              <Button
+                size="lg"
+                fullWidth
+                className="gap-2 !bg-white !text-indigo-700 shadow-lg hover:!bg-blue-50 md:w-auto"
+              >
+                <Route size={20} />
+                Crear Nueva Ruta
+              </Button>
+            </Link>
           </div>
 
-          <Link href="/route/create" className="mt-3 block md:mt-0 md:w-auto">
-            <Button size="lg" fullWidth className="gap-2 md:w-auto">
-              <Route size={20} />
-              Create New Route
-            </Button>
-          </Link>
-        </div>
-
-        {/* Period KPIs with comparison */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-text-secondary">
-                <Store size={16} />
-                <span className="text-xs">Tiendas</span>
-              </div>
-              {prevTotalStores > 0 && (
-                <div
-                  className={`flex items-center gap-0.5 text-xs font-medium ${
-                    filteredTotalStores >= prevTotalStores ? 'text-green-600' : 'text-amber-600'
-                  }`}
-                >
-                  {filteredTotalStores >= prevTotalStores ? (
-                    <ArrowUp size={12} />
-                  ) : (
-                    <ArrowDown size={12} />
-                  )}
-                  {Math.abs(
-                    Math.round(
-                      ((filteredTotalStores - prevTotalStores) / (prevTotalStores || 1)) * 100
-                    )
-                  )}%
-                </div>
-              )}
-            </div>
-            <p className="mt-1 text-2xl font-bold">{filteredTotalStores}</p>
-            {prevTotalStores > 0 && (
-              <p className="text-xs text-text-muted">vs {prevTotalStores} anterior</p>
-            )}
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-text-secondary">
-                <DollarSign size={16} />
-                <span className="text-xs">Ganancia</span>
-              </div>
-              {prevTotalProfit > 0 && (
-                <div
-                  className={`flex items-center gap-0.5 text-xs font-medium ${
-                    estimatedCurrentProfit >= estimatedPrevProfit ? 'text-green-600' : 'text-amber-600'
-                  }`}
-                >
-                  {estimatedCurrentProfit >= estimatedPrevProfit ? (
-                    <ArrowUp size={12} />
-                  ) : (
-                    <ArrowDown size={12} />
-                  )}
-                  {Math.abs(
-                    Math.round(
-                      ((estimatedCurrentProfit - estimatedPrevProfit) / (estimatedPrevProfit || 1)) *
-                        100
-                    )
-                  )}%
-                </div>
-              )}
-            </div>
-            <p className="mt-1 text-2xl font-bold text-secondary">
-              ${Math.round(estimatedCurrentProfit).toLocaleString()}
-            </p>
-            {estimatedPrevProfit > 0 && (
-              <p className="text-xs text-text-muted">vs ${Math.round(estimatedPrevProfit).toLocaleString()} anterior</p>
-            )}
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-text-secondary">
-                <Package size={16} />
-                <span className="text-xs">Artículos</span>
-              </div>
-              {prevTotalItems > 0 && (
-                <div
-                  className={`flex items-center gap-0.5 text-xs font-medium ${
-                    filteredTotalItems >= prevTotalItems ? 'text-green-600' : 'text-amber-600'
-                  }`}
-                >
-                  {filteredTotalItems >= prevTotalItems ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                  {Math.abs(
-                    Math.round(((filteredTotalItems - prevTotalItems) / (prevTotalItems || 1)) * 100)
-                  )}%
-                </div>
-              )}
-            </div>
-            <p className="mt-1 text-2xl font-bold">{filteredTotalItems}</p>
-            {prevTotalItems > 0 && <p className="text-xs text-text-muted">vs {prevTotalItems} anterior</p>}
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-text-secondary">
-                <TrendingUp size={16} />
-                <span className="text-xs">Gastado</span>
-              </div>
-              {prevTotalSpent > 0 && (
-                <div
-                  className={`flex items-center gap-0.5 text-xs font-medium ${
-                    filteredTotalSpent >= prevTotalSpent ? 'text-amber-600' : 'text-green-600'
-                  }`}
-                >
-                  {filteredTotalSpent >= prevTotalSpent ? (
-                    <ArrowUp size={12} />
-                  ) : (
-                    <ArrowDown size={12} />
-                  )}
-                  {Math.abs(
-                    Math.round(((filteredTotalSpent - prevTotalSpent) / (prevTotalSpent || 1)) * 100)
-                  )}%
-                </div>
-              )}
-            </div>
-            <p className="mt-1 text-2xl font-bold text-primary">
-              ${filteredTotalSpent.toLocaleString('en-US', { minimumFractionDigits: 0 })}
-            </p>
-            {prevTotalSpent > 0 && (
-              <p className="text-xs text-text-muted">vs ${prevTotalSpent.toLocaleString()} anterior</p>
-            )}
-          </Card>
-        </div>
-
-        {/* Period filter */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
-            Mis Rutas
-          </h3>
-          <div className="inline-flex rounded-xl border border-border bg-surface p-1 gap-0.5">
+          {/* Period selector inside hero */}
+          <div className="relative mt-5 inline-flex w-full gap-1 rounded-2xl bg-white/10 p-1 backdrop-blur-sm md:w-auto">
             {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
+                className={`flex-1 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all md:flex-none md:px-4 ${
                   period === p
-                    ? 'bg-primary text-white'
-                    : 'text-text-secondary hover:text-text'
+                    ? 'bg-white text-indigo-700 shadow-md'
+                    : 'text-blue-100 hover:bg-white/10'
                 }`}
               >
                 {PERIOD_LABELS[p]}
@@ -430,36 +410,85 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KPIs for the filtered period */}
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {kpis.map((k) => (
+            <div
+              key={k.label}
+              className={`rounded-2xl border border-border bg-surface p-4 shadow-lg ${k.glow} transition-transform hover:-translate-y-0.5`}
+            >
+              <div className="flex items-start justify-between">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-md ${k.chip}`}
+                >
+                  <k.icon size={19} />
+                </div>
+                <DeltaPill current={k.cur} prev={k.prev} invert={k.invert} />
+              </div>
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                {k.label}
+              </p>
+              <p className="text-2xl font-extrabold tracking-tight text-text">{k.value}</p>
+              <p className="mt-0.5 text-[11px] text-text-muted">
+                {k.prevLabel ?? PERIOD_LONG[period]}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Secondary stat strip */}
         <div className="grid grid-cols-3 gap-3">
-          <Card>
+          <Card className="!rounded-2xl">
             <div className="flex items-center gap-2 text-text-secondary">
-              <DollarSign size={16} />
-              <span className="text-xs">Total Gastado</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+                <Route size={14} />
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide">Rutas</span>
             </div>
-            <p className="mt-1 text-2xl font-bold text-primary">
-              ${filteredTotalSpent.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </p>
-            <p className="text-xs text-text-muted">{PERIOD_LABELS[period]}</p>
+            <p className="mt-2 text-xl font-extrabold">{filteredTrips.length}</p>
+            <p className="text-[11px] text-text-muted">{PERIOD_LONG[period]}</p>
           </Card>
-          <Card>
+          <Card className="!rounded-2xl">
             <div className="flex items-center gap-2 text-text-secondary">
-              <Package size={16} />
-              <span className="text-xs">Total Artículos</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                <DollarSign size={14} />
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide">
+                Costo/Artículo
+              </span>
             </div>
-            <p className="mt-1 text-2xl font-bold">{filteredTotalItems}</p>
-            <p className="text-xs text-text-muted">{PERIOD_LABELS[period]}</p>
-          </Card>
-          <Card>
-            <div className="flex items-center gap-2 text-text-secondary">
-              <TrendingUp size={16} />
-              <span className="text-xs">Costo/Artículo</span>
-            </div>
-            <p className="mt-1 text-2xl font-bold text-secondary">
+            <p className="mt-2 text-xl font-extrabold">
               ${filteredAvgCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <p className="text-xs text-text-muted">{PERIOD_LABELS[period]}</p>
+            <p className="text-[11px] text-text-muted">{PERIOD_LONG[period]}</p>
           </Card>
+          <Card className="!rounded-2xl">
+            <div className="flex items-center gap-2 text-text-secondary">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+                <Store size={14} />
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide">
+                Tiendas/Ruta
+              </span>
+            </div>
+            <p className="mt-2 text-xl font-extrabold">
+              {filteredTrips.length > 0
+                ? (filteredTotalStores / filteredTrips.length).toFixed(1)
+                : '0'}
+            </p>
+            <p className="text-[11px] text-text-muted">{PERIOD_LONG[period]}</p>
+          </Card>
+        </div>
+
+        {/* Routes */}
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
+            <span className="h-4 w-1 rounded-full bg-gradient-to-b from-blue-500 to-violet-600" />
+            Mis Rutas
+          </h3>
+          <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+            {filteredTrips.length}
+          </span>
         </div>
 
         <div>
@@ -468,129 +497,227 @@ export default function DashboardPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : filteredTrips.length === 0 ? (
-            <Card className="text-center py-8">
-              <MapPin size={40} className="mx-auto text-text-muted mb-3" />
-              <p className="font-medium text-text">
-                {trips.length === 0 ? 'No hay rutas aún' : `Sin rutas en ${PERIOD_LABELS[period].toLowerCase()}`}
+            <Card className="!rounded-2xl py-10 text-center">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-violet-100">
+                <MapPin size={26} className="text-indigo-500" />
+              </div>
+              <p className="font-semibold text-text">
+                {trips.length === 0 ? 'No hay rutas aún' : `Sin rutas en ${PERIOD_LONG[period].toLowerCase()}`}
               </p>
-              <p className="text-sm text-text-muted mt-1">
+              <p className="mt-1 text-sm text-text-muted">
                 {trips.length === 0
                   ? 'Crea tu primera ruta para empezar'
                   : 'Cambia el período o crea una nueva ruta'}
               </p>
             </Card>
           ) : (
-            <Card padding={false} className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-surface-secondary text-left text-xs uppercase tracking-wide text-text-muted">
-                      <th className="px-4 py-3 font-semibold">Ruta</th>
-                      <th className="px-4 py-3 font-semibold">Fecha</th>
-                      <th className="px-4 py-3 font-semibold">Distancia</th>
-                      <th className="px-4 py-3 font-semibold">Tiendas</th>
-                      <th className="px-4 py-3 font-semibold">Artículos</th>
-                      <th className="px-4 py-3 font-semibold">Gastado</th>
-                      <th className="px-4 py-3 font-semibold">Tiempo</th>
-                      <th className="px-4 py-3 font-semibold">Estado</th>
-                      <th className="px-4 py-3 font-semibold text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTrips.map((trip) => {
-                      const totals = tripTotals[trip.id];
-                      const timeWorked =
-                        (trip.total_drive_minutes || 0) + (trip.total_store_minutes || 0);
-                      return (
-                      <tr
-                        key={trip.id}
-                        onClick={() => setSelectedTrip(trip)}
-                        className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-secondary transition-colors"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                              <MapPin size={16} />
-                            </div>
-                            <span className="font-medium">
-                              {trip.name || trip.selected_chains?.slice(0, 3).join(', ') || 'Untitled route'}
-                            </span>
+            <>
+              {/* Mobile: route cards */}
+              <div className="space-y-3 md:hidden">
+                {filteredTrips.map((trip) => {
+                  const totals = tripTotals[trip.id];
+                  const timeWorked =
+                    (trip.total_drive_minutes || 0) + (trip.total_store_minutes || 0);
+                  return (
+                    <div
+                      key={trip.id}
+                      onClick={() => setSelectedTrip(trip)}
+                      className="cursor-pointer rounded-2xl border border-border bg-surface p-4 shadow-sm transition-shadow active:shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/25">
+                            <MapPin size={17} />
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-text-secondary">
-                          {new Date(trip.trip_date).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-text-secondary">
-                          {trip.total_distance_miles ? `${trip.total_distance_miles.toFixed(1)} mi` : '--'}
-                        </td>
-                        <td className="px-4 py-3 text-text-secondary">
-                          {totals ? `${totals.storesVisited}/${totals.totalStops}` : '0'}
-                        </td>
-                        <td className="px-4 py-3 text-text-secondary">
-                          {totals?.itemsBought || 0}
-                        </td>
-                        <td className="px-4 py-3 font-medium text-secondary">
-                          ${(totals?.spent || 0).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-text-secondary">
-                          {timeWorked > 0 ? formatDuration(timeWorked) : '--'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <TripStatusBadge status={trip.status} />
-                        </td>
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          {deletingTripId === trip.id ? (
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                size="sm"
-                                variant="danger"
-                                onClick={() => deleteTrip(trip.id)}
-                              >
-                                Confirm
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setDeletingTripId(null)}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => router.push(`/trip/${trip.id}`)}
-                                className="rounded-lg p-1.5 text-text-muted hover:bg-surface-secondary hover:text-primary transition-colors"
-                                title="View route"
-                              >
-                                <Eye size={16} />
-                              </button>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-text">
+                              {trip.name || trip.selected_chains?.slice(0, 3).join(', ') || 'Ruta sin nombre'}
+                            </p>
+                            <p className="flex items-center gap-1 text-xs text-text-muted">
+                              <Calendar size={11} />
+                              {new Date(trip.trip_date).toLocaleDateString()}
+                              {timeWorked > 0 && (
+                                <>
+                                  <span>·</span>
+                                  <Clock size={11} />
+                                  {formatDuration(timeWorked)}
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <TripStatusBadge status={trip.status} />
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-surface-secondary p-2.5 text-center">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase text-text-muted">Tiendas</p>
+                          <p className="text-sm font-bold">
+                            {totals ? `${totals.storesVisited}/${totals.totalStops}` : '0'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase text-text-muted">Artículos</p>
+                          <p className="text-sm font-bold">{totals?.itemsBought || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase text-text-muted">Gastado</p>
+                          <p className="text-sm font-bold text-emerald-600">
+                            ${(totals?.spent || 0).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                        {deletingTripId === trip.id ? (
+                          <div className="flex w-full items-center gap-2">
+                            <Button size="sm" variant="danger" fullWidth onClick={() => deleteTrip(trip.id)}>
+                              Confirmar
+                            </Button>
+                            <Button size="sm" variant="outline" fullWidth onClick={() => setDeletingTripId(null)}>
+                              Cancelar
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => router.push(`/trip/${trip.id}`)}
+                              className="flex items-center gap-1 rounded-xl bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors active:bg-indigo-100"
+                            >
+                              Ver ruta
+                              <ChevronRight size={14} />
+                            </button>
+                            <div className="flex items-center gap-1">
                               {trip.status === 'planning' && (
                                 <button
                                   onClick={() => router.push(`/trip/${trip.id}/edit`)}
-                                  className="rounded-lg p-1.5 text-text-muted hover:bg-surface-secondary hover:text-primary transition-colors"
-                                  title="Edit route"
+                                  className="rounded-lg p-2 text-text-muted transition-colors active:bg-surface-secondary"
+                                  title="Editar ruta"
                                 >
                                   <Pencil size={16} />
                                 </button>
                               )}
                               <button
                                 onClick={() => setDeletingTripId(trip.id)}
-                                className="rounded-lg p-1.5 text-text-muted hover:bg-red-50 hover:text-danger transition-colors"
-                                title="Delete route"
+                                className="rounded-lg p-2 text-text-muted transition-colors active:bg-red-50 active:text-danger"
+                                title="Eliminar ruta"
                               >
                                 <Trash2 size={16} />
                               </button>
                             </div>
-                          )}
-                        </td>
-                      </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </Card>
+
+              {/* Desktop: table */}
+              <Card padding={false} className="hidden overflow-hidden !rounded-2xl md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-gradient-to-r from-slate-50 to-indigo-50/50 text-left text-xs uppercase tracking-wide text-text-muted">
+                        <th className="px-4 py-3 font-semibold">Ruta</th>
+                        <th className="px-4 py-3 font-semibold">Fecha</th>
+                        <th className="px-4 py-3 font-semibold">Distancia</th>
+                        <th className="px-4 py-3 font-semibold">Tiendas</th>
+                        <th className="px-4 py-3 font-semibold">Artículos</th>
+                        <th className="px-4 py-3 font-semibold">Gastado</th>
+                        <th className="px-4 py-3 font-semibold">Tiempo</th>
+                        <th className="px-4 py-3 font-semibold">Estado</th>
+                        <th className="px-4 py-3 text-right font-semibold">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTrips.map((trip) => {
+                        const totals = tripTotals[trip.id];
+                        const timeWorked =
+                          (trip.total_drive_minutes || 0) + (trip.total_store_minutes || 0);
+                        return (
+                          <tr
+                            key={trip.id}
+                            onClick={() => setSelectedTrip(trip)}
+                            className="cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-indigo-50/40"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+                                  <MapPin size={16} />
+                                </div>
+                                <span className="font-medium">
+                                  {trip.name || trip.selected_chains?.slice(0, 3).join(', ') || 'Ruta sin nombre'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-text-secondary">
+                              {new Date(trip.trip_date).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3 text-text-secondary">
+                              {trip.total_distance_miles ? `${trip.total_distance_miles.toFixed(1)} mi` : '--'}
+                            </td>
+                            <td className="px-4 py-3 text-text-secondary">
+                              {totals ? `${totals.storesVisited}/${totals.totalStops}` : '0'}
+                            </td>
+                            <td className="px-4 py-3 text-text-secondary">
+                              {totals?.itemsBought || 0}
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-emerald-600">
+                              ${(totals?.spent || 0).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-text-secondary">
+                              {timeWorked > 0 ? formatDuration(timeWorked) : '--'}
+                            </td>
+                            <td className="px-4 py-3">
+                              <TripStatusBadge status={trip.status} />
+                            </td>
+                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                              {deletingTripId === trip.id ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button size="sm" variant="danger" onClick={() => deleteTrip(trip.id)}>
+                                    Confirmar
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => setDeletingTripId(null)}>
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => router.push(`/trip/${trip.id}`)}
+                                    className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-indigo-50 hover:text-primary"
+                                    title="Ver ruta"
+                                  >
+                                    <Eye size={16} />
+                                  </button>
+                                  {trip.status === 'planning' && (
+                                    <button
+                                      onClick={() => router.push(`/trip/${trip.id}/edit`)}
+                                      className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-indigo-50 hover:text-primary"
+                                      title="Editar ruta"
+                                    >
+                                      <Pencil size={16} />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => setDeletingTripId(trip.id)}
+                                    className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-red-50 hover:text-danger"
+                                    title="Eliminar ruta"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </>
           )}
         </div>
       </div>
