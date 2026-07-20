@@ -118,7 +118,21 @@ function getAuth() {
     throw new Error('Google Sheets credentials not configured');
   }
 
-  const privateKey = rawKey.replace(/\\n/g, '\n');
+  // Vercel env vars often arrive wrapped in quotes and/or with escaped newlines
+  let privateKey = rawKey.trim();
+  if (
+    (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+    (privateKey.startsWith("'") && privateKey.endsWith("'"))
+  ) {
+    privateKey = privateKey.slice(1, -1);
+  }
+  privateKey = privateKey.replace(/\\n/g, '\n').trim();
+
+  if (!privateKey.includes('-----BEGIN')) {
+    throw new Error(
+      'GOOGLE_SHEETS_PRIVATE_KEY inválida: debe incluir -----BEGIN PRIVATE KEY----- completo'
+    );
+  }
 
   return new google.auth.GoogleAuth({
     credentials: {
