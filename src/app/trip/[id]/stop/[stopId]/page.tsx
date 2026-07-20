@@ -169,6 +169,13 @@ export default function StopDetailPage({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error importing');
 
+      if (!data.rowCount) {
+        alert(
+          'No se encontraron filas con datos en la hoja (001-01, desde la fila 2). La hoja NO fue borrada. Revisa que los datos estén en las columnas correctas.'
+        );
+        return;
+      }
+
       setTotalSpent(data.totalSpent);
       setTotalItemsBought(data.totalItems);
       setProjectedProfit(data.projectedProfit);

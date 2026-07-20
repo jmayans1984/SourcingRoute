@@ -52,16 +52,23 @@ function buildTotals(rows: string[][]) {
     notes: string;
   }>();
 
+  let parsedRows = 0;
+
   for (const row of rows) {
     const qty    = Math.round(toNumber(row[COL.QUANTITY]));
     const cost   = toNumber(row[COL.COST_PRICE]);
     const sale   = toNumber(row[COL.SALE_PRICE]);
     const profit = toNumber(row[COL.PROFIT]);
-    const name   = (row[COL.NAME] ?? '').trim();
+    let name     = (row[COL.NAME] ?? '').trim();
     const upc    = (row[COL.UPC]  ?? '').trim();
     const asin   = (row[COL.ASIN] ?? '').trim();
 
-    if (!name) continue;
+    // A row counts if it has ANY usable data — don't require the name column,
+    // some scans only fill UPC + numbers
+    const hasData = !!name || !!upc || !!asin || qty > 0 || cost > 0 || sale > 0;
+    if (!hasData) continue;
+    if (!name) name = upc || asin || 'Producto sin nombre';
+    parsedRows++;
 
     totalItems      += qty;
     totalSpent      += cost * qty;
@@ -105,7 +112,7 @@ function buildTotals(rows: string[][]) {
     totalSpent:      Math.round(totalSpent      * 100) / 100,
     projectedSales:  Math.round(projectedSales  * 100) / 100,
     projectedProfit: Math.round(projectedProfit * 100) / 100,
-    rowCount:        rows.filter((r) => (r[COL.NAME] ?? '').trim()).length,
+    rowCount:        parsedRows,
     products,
   };
 }
@@ -211,11 +218,14 @@ export async function POST(req: NextRequest) {
 
     const totals = buildTotals(rows);
 
-    if (rows.length > 0) {
+    // Safety: only clear the sheet if we actually parsed usable rows.
+    // Never wipe data we couldn't import.
+    const shouldClear = totals.rowCount > 0;
+    if (shouldClear) {
       await sheets.spreadsheets.values.clear({ spreadsheetId: sheetId, range: RANGE });
     }
 
-    return NextResponse.json({ ...totals, cleared: true });
+    return NextResponse.json({ ...totals, cleared: shouldClear });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error('[sheets/import POST]', msg);
