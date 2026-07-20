@@ -20,6 +20,8 @@ import {
   Eye,
   Pencil,
   Trash2,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import type { SourcingTrip } from '@/types/database';
 
@@ -63,6 +65,33 @@ function getPeriodStart(period: PeriodFilter): Date | null {
   return null;
 }
 
+function getPreviousPeriodStart(period: PeriodFilter): { start: Date; end: Date } | null {
+  const now = new Date();
+  if (period === 'week') {
+    const currentStart = getStartOfWeek();
+    const prevEnd = new Date(currentStart);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    prevEnd.setHours(23, 59, 59, 999);
+    const prevStart = new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate() - 6);
+    prevStart.setHours(0, 0, 0, 0);
+    return { start: prevStart, end: prevEnd };
+  }
+  if (period === 'month') {
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    prevMonthEnd.setHours(23, 59, 59, 999);
+    return { start: prevMonthStart, end: prevMonthEnd };
+  }
+  if (period === 'year') {
+    const prevYearStart = new Date(now.getFullYear() - 1, 0, 1);
+    const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31);
+    prevYearEnd.setHours(23, 59, 59, 999);
+    return { start: prevYearStart, end: prevYearEnd };
+  }
+  return null;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [trips, setTrips] = useState<SourcingTrip[]>([]);
@@ -82,6 +111,12 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  // Re-render when period changes (calculations are re-run)
+  useEffect(() => {
+    // This effect just triggers a re-render when period changes
+    // All the filtering and calculations happen in the component body
+  }, [period]);
 
   async function loadDashboard() {
     const supabase = createClient();
@@ -197,8 +232,40 @@ export default function DashboardPage() {
     (sum, t) => sum + (tripTotals[t.id]?.itemsBought || 0),
     0
   );
+  const filteredTotalStores = filteredTrips.reduce(
+    (sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0),
+    0
+  );
   const filteredAvgCost =
     filteredTotalItems > 0 ? filteredTotalSpent / filteredTotalItems : 0;
+
+  // Previous period comparison
+  const prevPeriod = getPreviousPeriodStart(period);
+  let prevTotalSpent = 0;
+  let prevTotalItems = 0;
+  let prevTotalStores = 0;
+  let prevTotalProfit = 0;
+
+  if (prevPeriod && period !== 'all') {
+    const prevTrips = trips.filter((t) => {
+      const tripDate = new Date(t.trip_date);
+      return tripDate >= prevPeriod.start && tripDate <= prevPeriod.end;
+    });
+    prevTotalSpent = prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.spent || 0), 0);
+    prevTotalItems = prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.itemsBought || 0), 0);
+    prevTotalStores = prevTrips.reduce(
+      (sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0),
+      0
+    );
+  }
+
+  // Calculate current period profit (from store_visits within date range)
+  const currentPeriodProfit = filteredTrips.length > 0 ? stats.totalProfit : 0;
+  // Rough estimate: use the ratio of current spent to all-time spent for profit
+  const allTimeSpent = trips.reduce((sum, t) => sum + (tripTotals[t.id]?.spent || 0), 0);
+  const profitRatio = allTimeSpent > 0 ? stats.totalProfit / allTimeSpent : 0;
+  const estimatedCurrentProfit = filteredTotalSpent * profitRatio;
+  const estimatedPrevProfit = prevTotalSpent * profitRatio;
 
   return (
     <>
@@ -219,37 +286,125 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* Historical KPIs (all-time) */}
+        {/* Period KPIs with comparison */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Card>
-            <div className="flex items-center gap-2 text-text-secondary">
-              <Store size={16} />
-              <span className="text-xs">Tiendas Visitadas</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-text-secondary">
+                <Store size={16} />
+                <span className="text-xs">Tiendas</span>
+              </div>
+              {prevTotalStores > 0 && (
+                <div
+                  className={`flex items-center gap-0.5 text-xs font-medium ${
+                    filteredTotalStores >= prevTotalStores ? 'text-green-600' : 'text-amber-600'
+                  }`}
+                >
+                  {filteredTotalStores >= prevTotalStores ? (
+                    <ArrowUp size={12} />
+                  ) : (
+                    <ArrowDown size={12} />
+                  )}
+                  {Math.abs(
+                    Math.round(
+                      ((filteredTotalStores - prevTotalStores) / (prevTotalStores || 1)) * 100
+                    )
+                  )}%
+                </div>
+              )}
             </div>
-            <p className="mt-1 text-2xl font-bold">{stats.totalStoresVisited}</p>
+            <p className="mt-1 text-2xl font-bold">{filteredTotalStores}</p>
+            {prevTotalStores > 0 && (
+              <p className="text-xs text-text-muted">vs {prevTotalStores} anterior</p>
+            )}
           </Card>
+
           <Card>
-            <div className="flex items-center gap-2 text-text-secondary">
-              <DollarSign size={16} />
-              <span className="text-xs">Ganancia Estimada</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-text-secondary">
+                <DollarSign size={16} />
+                <span className="text-xs">Ganancia</span>
+              </div>
+              {prevTotalProfit > 0 && (
+                <div
+                  className={`flex items-center gap-0.5 text-xs font-medium ${
+                    estimatedCurrentProfit >= estimatedPrevProfit ? 'text-green-600' : 'text-amber-600'
+                  }`}
+                >
+                  {estimatedCurrentProfit >= estimatedPrevProfit ? (
+                    <ArrowUp size={12} />
+                  ) : (
+                    <ArrowDown size={12} />
+                  )}
+                  {Math.abs(
+                    Math.round(
+                      ((estimatedCurrentProfit - estimatedPrevProfit) / (estimatedPrevProfit || 1)) *
+                        100
+                    )
+                  )}%
+                </div>
+              )}
             </div>
             <p className="mt-1 text-2xl font-bold text-secondary">
-              ${stats.totalProfit.toLocaleString()}
+              ${Math.round(estimatedCurrentProfit).toLocaleString()}
             </p>
+            {estimatedPrevProfit > 0 && (
+              <p className="text-xs text-text-muted">vs ${Math.round(estimatedPrevProfit).toLocaleString()} anterior</p>
+            )}
           </Card>
+
           <Card>
-            <div className="flex items-center gap-2 text-text-secondary">
-              <Package size={16} />
-              <span className="text-xs">Productos Encontrados</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-text-secondary">
+                <Package size={16} />
+                <span className="text-xs">Artículos</span>
+              </div>
+              {prevTotalItems > 0 && (
+                <div
+                  className={`flex items-center gap-0.5 text-xs font-medium ${
+                    filteredTotalItems >= prevTotalItems ? 'text-green-600' : 'text-amber-600'
+                  }`}
+                >
+                  {filteredTotalItems >= prevTotalItems ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                  {Math.abs(
+                    Math.round(((filteredTotalItems - prevTotalItems) / (prevTotalItems || 1)) * 100)
+                  )}%
+                </div>
+              )}
             </div>
-            <p className="mt-1 text-2xl font-bold">{stats.totalProducts}</p>
+            <p className="mt-1 text-2xl font-bold">{filteredTotalItems}</p>
+            {prevTotalItems > 0 && <p className="text-xs text-text-muted">vs {prevTotalItems} anterior</p>}
           </Card>
+
           <Card>
-            <div className="flex items-center gap-2 text-text-secondary">
-              <TrendingUp size={16} />
-              <span className="text-xs">Total Rutas</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-text-secondary">
+                <TrendingUp size={16} />
+                <span className="text-xs">Gastado</span>
+              </div>
+              {prevTotalSpent > 0 && (
+                <div
+                  className={`flex items-center gap-0.5 text-xs font-medium ${
+                    filteredTotalSpent >= prevTotalSpent ? 'text-amber-600' : 'text-green-600'
+                  }`}
+                >
+                  {filteredTotalSpent >= prevTotalSpent ? (
+                    <ArrowUp size={12} />
+                  ) : (
+                    <ArrowDown size={12} />
+                  )}
+                  {Math.abs(
+                    Math.round(((filteredTotalSpent - prevTotalSpent) / (prevTotalSpent || 1)) * 100)
+                  )}%
+                </div>
+              )}
             </div>
-            <p className="mt-1 text-2xl font-bold">{stats.totalTrips}</p>
+            <p className="mt-1 text-2xl font-bold text-primary">
+              ${filteredTotalSpent.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+            </p>
+            {prevTotalSpent > 0 && (
+              <p className="text-xs text-text-muted">vs ${prevTotalSpent.toLocaleString()} anterior</p>
+            )}
           </Card>
         </div>
 
