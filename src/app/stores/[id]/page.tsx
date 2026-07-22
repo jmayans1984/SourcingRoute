@@ -116,7 +116,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
   if (!store) {
     return (
       <AppShell>
-        <Header title="Loading..." showBack />
+        <Header title="Cargando..." showBack />
         <div className="flex items-center justify-center p-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -139,49 +139,53 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
       <Header title={store.name} showBack />
 
       <div className="space-y-4 p-4 md:p-0">
-        <Card>
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-bold">{store.name}</h2>
-              <p className="text-sm text-text-secondary">{store.chain}</p>
-              <p className="text-sm text-text-muted mt-1">{store.address}</p>
+        {/* Hero */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-xl shadow-indigo-500/25">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-extrabold">{store.name}</h2>
+              <p className="text-sm text-indigo-100">{store.chain}</p>
+              <p className="mt-1 text-sm text-indigo-100/80">{store.address}</p>
+              {latestSignal && (
+                <div className="mt-3">
+                  <WifiBadge signal={latestSignal} />
+                </div>
+              )}
             </div>
-            <a
-              href={buildWazeUrl(store.lat, store.lng)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button size="sm" variant="primary" className="gap-1">
-                <Navigation size={14} />
-                Go
-              </Button>
+            <a href={buildWazeUrl(store.lat, store.lng)} target="_blank" rel="noopener noreferrer">
+              <button className="flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-indigo-700 shadow-md transition-colors hover:bg-blue-50">
+                <Navigation size={15} />
+                Ir
+              </button>
             </a>
           </div>
-          {latestSignal && (
-            <div className="mt-3">
-              <WifiBadge signal={latestSignal} />
-            </div>
-          )}
-        </Card>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
-          <Card className="text-center">
-            <Star size={18} className="mx-auto text-accent" />
-            <p className="mt-1 text-lg font-bold">
+          <Card className="!rounded-2xl text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20">
+              <Star size={18} />
+            </div>
+            <p className="mt-1.5 text-lg font-extrabold">
               {avgRating ? avgRating.toFixed(1) : '--'}
             </p>
-            <p className="text-xs text-text-muted">Avg Rating</p>
+            <p className="text-xs text-text-muted">Calificación</p>
           </Card>
-          <Card className="text-center">
-            <DollarSign size={18} className="mx-auto text-secondary" />
-            <p className="mt-1 text-lg font-bold">${avgProfit.toFixed(0)}</p>
-            <p className="text-xs text-text-muted">Avg Profit</p>
+          <Card className="!rounded-2xl text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20">
+              <DollarSign size={18} />
+            </div>
+            <p className="mt-1.5 text-lg font-extrabold">${avgProfit.toFixed(0)}</p>
+            <p className="text-xs text-text-muted">Utilidad prom.</p>
           </Card>
-          <Card className="text-center">
-            <Package size={18} className="mx-auto text-primary" />
-            <p className="mt-1 text-lg font-bold">{totalProducts}</p>
-            <p className="text-xs text-text-muted">Products</p>
+          <Card className="!rounded-2xl text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20">
+              <Package size={18} />
+            </div>
+            <p className="mt-1.5 text-lg font-extrabold">{totalProducts}</p>
+            <p className="text-xs text-text-muted">Productos</p>
           </Card>
         </div>
 
@@ -194,7 +198,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
             className="gap-2"
           >
             <Heart size={16} className={preference?.is_favorite ? 'fill-current' : ''} />
-            {preference?.is_favorite ? 'Unfavorite' : 'Favorite'}
+            {preference?.is_favorite ? 'Quitar favorita' : 'Favorita'}
           </Button>
           <Button
             fullWidth
@@ -203,15 +207,15 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
             className="gap-2"
           >
             <Ban size={16} />
-            {preference?.is_blocked ? 'Unblock' : 'Block'}
+            {preference?.is_blocked ? 'Desbloquear' : 'Bloquear'}
           </Button>
         </div>
 
         {/* Visit history */}
-        <Card>
-          <CardTitle>Visit History ({visits.length})</CardTitle>
+        <Card className="!rounded-2xl">
+          <CardTitle>Historial de Visitas ({visits.length})</CardTitle>
           {visits.length === 0 ? (
-            <p className="mt-2 text-sm text-text-muted">No visits recorded yet</p>
+            <p className="mt-2 text-sm text-text-muted">Aún no hay visitas registradas</p>
           ) : (
             <div className="mt-2 space-y-3">
               {visits.map((visit) => (
@@ -237,7 +241,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
                     <p className="text-sm font-medium text-secondary">
                       ${visit.estimated_profit.toFixed(0)}
                     </p>
-                    <p className="text-xs text-text-muted">{visit.products_found} items</p>
+                    <p className="text-xs text-text-muted">{visit.products_found} artículos</p>
                   </div>
                 </div>
               ))}
@@ -247,8 +251,8 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Receipts */}
         {allReceipts.length > 0 && (
-          <Card>
-            <CardTitle>Receipts ({allReceipts.length})</CardTitle>
+          <Card className="!rounded-2xl">
+            <CardTitle>Recibos ({allReceipts.length})</CardTitle>
             <div className="mt-3 grid grid-cols-3 gap-2">
               {allReceipts.map((url) => (
                 <a

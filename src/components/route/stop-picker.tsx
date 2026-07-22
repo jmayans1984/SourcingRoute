@@ -123,7 +123,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
             value={storeName}
             onChange={setStoreName}
             onEnter={() => addressInputRef.current?.focus()}
-            placeholder='e.g. "Ross", "Marshalls", "TJ Maxx"'
+            placeholder='Ej: "Ross", "Marshalls", "TJ Maxx"'
           />
           {storeName.trim() && (
             <p className="mt-1 text-xs text-text-muted">
@@ -136,7 +136,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
           <div className="flex-1">
             <Input
               ref={addressInputRef}
-              label="Address"
+              label="Dirección"
               value={addressValue}
               onChange={(e) => setAddressValue(e.target.value)}
               onKeyDown={(e) => {
@@ -145,7 +145,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
                   handleAddClick();
                 }
               }}
-              placeholder="Search an address..."
+              placeholder="Busca una dirección..."
             />
           </div>
           <div className="flex items-end">
@@ -157,7 +157,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
               className="gap-1"
             >
               <Plus size={16} />
-              Add
+              Agregar
             </Button>
           </div>
         </div>
@@ -167,7 +167,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
         <div className="rounded-xl border border-dashed border-border p-4 text-center">
           <MapPin size={20} className="mx-auto text-text-muted" />
           <p className="mt-1 text-sm text-text-muted">
-            Enter a store name and address. They&apos;ll appear on the map.
+            Ingresa el nombre y la dirección de la tienda. Aparecerán en el mapa.
           </p>
         </div>
       ) : (

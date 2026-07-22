@@ -109,10 +109,10 @@ export default function CreateRoutePage() {
         router.push(`/trip/${data.trip_id}`);
         return;
       }
-      setError(data.error || 'Could not create the route. Please try again.');
+      setError(data.error || 'No se pudo crear la ruta. Intenta de nuevo.');
       setLoading(false);
     } catch {
-      setError('Could not create the route. Please try again.');
+      setError('No se pudo crear la ruta. Intenta de nuevo.');
       setLoading(false);
     }
   }
@@ -120,7 +120,7 @@ export default function CreateRoutePage() {
   if (pageLoading) {
     return (
       <AppShell>
-        <Header title="Create Route" showBack />
+        <Header title="Crear Ruta" showBack />
         <div className="flex items-center justify-center p-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -130,25 +130,26 @@ export default function CreateRoutePage() {
 
   return (
     <AppShell>
-      <Header title="Create Route" showBack />
+      <Header title="Crear Ruta" showBack />
 
       <form onSubmit={handleSubmit} className="p-4 md:p-0">
         <div className="gap-4 space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:space-y-0">
           {/* Left column: the form */}
           <div className="space-y-4">
-            <Card>
-              <h3 className="mb-3 text-sm font-semibold text-text-secondary uppercase tracking-wide">
-                Route Details
+            <Card className="!rounded-2xl">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
+                <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+                Detalles de la Ruta
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  label="Route Name (optional)"
+                  label="Nombre (opcional)"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Orlando Saturday Run"
+                  placeholder="Ej: Sábado en Orlando"
                 />
                 <Input
-                  label="Route Date"
+                  label="Fecha"
                   type="date"
                   value={tripDate}
                   onChange={(e) => setTripDate(e.target.value)}
@@ -156,25 +157,26 @@ export default function CreateRoutePage() {
               </div>
             </Card>
 
-            <Card>
-              <h3 className="mb-3 text-sm font-semibold text-text-secondary uppercase tracking-wide">
-                Start & End
+            <Card className="!rounded-2xl">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
+                <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+                Inicio y Fin
               </h3>
               <div className="space-y-3">
                 <LocationInput
-                  label="Starting Point"
+                  label="Punto de inicio"
                   value={startAddress}
                   onChange={(val, lat, lng) => {
                     setStartAddress(val);
                     setStartLat(lat ?? null);
                     setStartLng(lng ?? null);
                   }}
-                  placeholder="Your starting address"
+                  placeholder="Tu dirección de inicio"
                 />
 
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-text">
-                    End of Route
+                    Fin de la ruta
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {([
@@ -207,25 +209,26 @@ export default function CreateRoutePage() {
 
                 {endMode === 'custom' && (
                   <LocationInput
-                    label="End Point"
+                    label="Punto final"
                     value={endAddress}
                     onChange={(val, lat, lng) => {
                       setEndAddress(val);
                       setEndLat(lat ?? null);
                       setEndLng(lng ?? null);
                     }}
-                    placeholder="Different destination"
+                    placeholder="Destino diferente"
                   />
                 )}
               </div>
             </Card>
 
-            <Card>
-              <h3 className="mb-1 text-sm font-semibold text-text-secondary uppercase tracking-wide">
-                Stores to Visit
+            <Card className="!rounded-2xl">
+              <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
+                <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+                Tiendas a Visitar
               </h3>
               <p className="mb-3 text-xs text-text-muted">
-                Search each store by name or address and add it — it will show up on the map.
+                Busca cada tienda por nombre o dirección y agrégala — aparecerá en el mapa.
               </p>
               <StopPicker stops={stops} onChange={setStops} brands={brands} />
             </Card>
@@ -245,7 +248,7 @@ export default function CreateRoutePage() {
               className="gap-2"
             >
               <Route size={20} />
-              Create Route ({stops.length} {stops.length === 1 ? 'stop' : 'stops'})
+              Crear Ruta ({stops.length} {stops.length === 1 ? 'parada' : 'paradas'})
             </Button>
           </div>
 
@@ -263,31 +266,39 @@ export default function CreateRoutePage() {
             />
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Card className="text-center">
-                <MapPin size={18} className="mx-auto text-primary" />
-                <p className="mt-1 text-lg font-bold">
+              <Card className="!rounded-2xl text-center">
+                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20">
+                  <MapPin size={16} />
+                </div>
+                <p className="mt-1.5 text-lg font-extrabold">
                   {routeStats ? formatDistance(routeStats.distanceMiles) : '--'}
                 </p>
                 <p className="text-xs text-text-muted">Distancia</p>
               </Card>
-              <Card className="text-center">
-                <Clock size={18} className="mx-auto text-secondary" />
-                <p className="mt-1 text-lg font-bold">
+              <Card className="!rounded-2xl text-center">
+                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20">
+                  <Clock size={16} />
+                </div>
+                <p className="mt-1.5 text-lg font-extrabold">
                   {routeStats ? formatDuration(routeStats.driveMinutes + timeInStoresMinutes) : '--'}
                 </p>
                 <p className="text-xs text-text-muted">Tiempo Total</p>
               </Card>
-              <Card className="text-center">
-                <Timer size={18} className="mx-auto text-accent" />
-                <p className="mt-1 text-lg font-bold">
+              <Card className="!rounded-2xl text-center">
+                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/20">
+                  <Timer size={16} />
+                </div>
+                <p className="mt-1.5 text-lg font-extrabold">
                   {stops.length > 0 ? formatDuration(timeInStoresMinutes) : '--'}
                 </p>
-                <p className="text-xs text-text-muted">Tiempo en Tiendas</p>
+                <p className="text-xs text-text-muted">En Tiendas</p>
               </Card>
-              <Card className="text-center">
-                <Store size={18} className="mx-auto text-primary" />
-                <p className="mt-1 text-lg font-bold">{stops.length}</p>
-                <p className="text-xs text-text-muted">Cant. Paradas</p>
+              <Card className="!rounded-2xl text-center">
+                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20">
+                  <Store size={16} />
+                </div>
+                <p className="mt-1.5 text-lg font-extrabold">{stops.length}</p>
+                <p className="text-xs text-text-muted">Paradas</p>
               </Card>
             </div>
           </div>

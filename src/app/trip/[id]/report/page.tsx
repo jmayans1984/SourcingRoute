@@ -116,7 +116,7 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
   if (!trip) {
     return (
       <AppShell>
-        <Header title="Loading..." showBack />
+        <Header title="Cargando..." showBack />
         <div className="flex items-center justify-center p-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -144,45 +144,58 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
 
   return (
     <AppShell>
-      <Header title="Trip Report" showBack />
+      <Header title="Reporte de la Ruta" showBack />
 
       <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
-        <div className="text-center">
-          <h2 className="text-xl font-bold">Sourcing Day Complete!</h2>
-          <p className="text-sm text-text-muted">
-            {new Date(trip.trip_date).toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </p>
+        {/* Hero */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-center text-white shadow-xl shadow-emerald-500/25">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
+              <Trophy size={26} className="text-amber-300" />
+            </div>
+            <h2 className="mt-3 text-2xl font-extrabold">¡Día de sourcing completado!</h2>
+            <p className="mt-1 text-sm text-emerald-100">
+              {new Date(trip.trip_date).toLocaleDateString('es-CO', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+          </div>
         </div>
 
         {/* Key metrics */}
         <div className="grid grid-cols-3 gap-3">
-          <Card className="text-center">
-            <MapPin size={20} className="mx-auto text-primary" />
-            <p className="mt-1 text-2xl font-bold">{visitedStops.length}</p>
-            <p className="text-xs text-text-muted">Stores Visited</p>
+          <Card className="!rounded-2xl text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20">
+              <MapPin size={18} />
+            </div>
+            <p className="mt-1.5 text-2xl font-extrabold">{visitedStops.length}</p>
+            <p className="text-xs text-text-muted">Tiendas</p>
           </Card>
-          <Card className="text-center">
-            <Package size={20} className="mx-auto text-accent" />
-            <p className="mt-1 text-2xl font-bold">{totalItemsBought}</p>
-            <p className="text-xs text-text-muted">Items Bought</p>
+          <Card className="!rounded-2xl text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20">
+              <Package size={18} />
+            </div>
+            <p className="mt-1.5 text-2xl font-extrabold">{totalItemsBought}</p>
+            <p className="text-xs text-text-muted">Artículos</p>
           </Card>
-          <Card className="text-center">
-            <DollarSign size={20} className="mx-auto text-secondary" />
-            <p className="mt-1 text-2xl font-bold text-secondary">
-              ${totalSpent.toFixed(0)}
-            </p>
-            <p className="text-xs text-text-muted">Total Spent</p>
+          <Card className="!rounded-2xl text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/20">
+              <DollarSign size={18} />
+            </div>
+            <p className="mt-1.5 text-2xl font-extrabold">${totalSpent.toFixed(0)}</p>
+            <p className="text-xs text-text-muted">Gastado</p>
           </Card>
         </div>
 
         {/* P&L: product profit − route expenses = real profit */}
-        <Card>
+        <Card className="!rounded-2xl">
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp size={18} className="text-green-600" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+              <TrendingUp size={16} />
+            </span>
             <CardTitle>Resultado de la Ruta</CardTitle>
           </div>
 
@@ -231,22 +244,24 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
 
         {/* Top spending store */}
         {topSpendStore && (
-          <Card>
+          <Card className="!rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
-              <Trophy size={18} className="text-accent" />
-              <CardTitle>Highest Spend</CardTitle>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                <Trophy size={16} />
+              </span>
+              <CardTitle>Mayor Gasto</CardTitle>
             </div>
             <p className="font-medium">{topSpendStore.store.name}</p>
             <p className="text-sm text-text-muted">
-              ${(topSpendStore.total_spent || 0).toFixed(0)} spent ·{' '}
-              {topSpendStore.total_items_bought || 0} items
+              ${(topSpendStore.total_spent || 0).toFixed(0)} gastado ·{' '}
+              {topSpendStore.total_items_bought || 0} artículos
             </p>
           </Card>
         )}
 
         {/* Products table */}
         {products.length > 0 && (
-          <Card>
+          <Card className="!rounded-2xl">
             <CardTitle>Productos Comprados</CardTitle>
             <div className="mt-3 overflow-x-auto -mx-4 px-4">
               <table className="w-full text-xs min-w-[500px]">
@@ -313,8 +328,8 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
         )}
 
         {/* All stops detail */}
-        <Card>
-          <CardTitle>All Stops</CardTitle>
+        <Card className="!rounded-2xl">
+          <CardTitle>Todas las Paradas</CardTitle>
           <div className="mt-2 space-y-3">
             {stops.map((stop) => (
               <div key={stop.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
@@ -330,7 +345,7 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
                       )}
                       {stop.status === 'skipped' && (
                         <span className="flex items-center gap-1">
-                          <SkipForward size={12} /> Skipped
+                          <SkipForward size={12} /> Saltada
                         </span>
                       )}
                     </div>
@@ -341,7 +356,7 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
                     <p className="text-sm font-medium text-secondary">
                       ${(stop.total_spent || 0).toFixed(0)}
                     </p>
-                    <p className="text-xs text-text-muted">{stop.total_items_bought || 0} items</p>
+                    <p className="text-xs text-text-muted">{stop.total_items_bought || 0} artículos</p>
                   </div>
                 )}
               </div>

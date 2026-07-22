@@ -56,9 +56,9 @@ const emptyProduct: ProductEntry = {
 };
 
 const wifiOptions: { value: WifiSignal; label: string; icon: typeof Wifi }[] = [
-  { value: 'bad', label: 'No Signal', icon: WifiOff },
-  { value: 'regular', label: 'Weak', icon: SignalMedium },
-  { value: 'good', label: 'Good', icon: Wifi },
+  { value: 'bad', label: 'Sin señal', icon: WifiOff },
+  { value: 'regular', label: 'Débil', icon: SignalMedium },
+  { value: 'good', label: 'Buena', icon: Wifi },
 ];
 
 export default function StopDetailPage({
@@ -355,7 +355,7 @@ export default function StopDetailPage({
   if (!stop) {
     return (
       <AppShell>
-        <Header title="Loading..." showBack />
+        <Header title="Cargando..." showBack />
         <div className="flex items-center justify-center p-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -368,10 +368,10 @@ export default function StopDetailPage({
       <Header title={stop.store.name} showBack />
 
       <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
-        <Card>
+        <Card className="!rounded-2xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">{stop.store.name}</p>
+              <p className="font-semibold">{stop.store.name}</p>
               <p className="text-sm text-text-muted">{stop.store.address}</p>
             </div>
             <StopStatusBadge status={stop.status} />
@@ -402,8 +402,8 @@ export default function StopDetailPage({
         </Card>
 
         {/* Rating */}
-        <Card>
-          <CardTitle>Rate this store</CardTitle>
+        <Card className="!rounded-2xl">
+          <CardTitle>Califica esta tienda</CardTitle>
           <div className="mt-2 flex gap-2">
             {([1, 2, 3] as StoreRating[]).map((r) => (
               <button
@@ -424,17 +424,17 @@ export default function StopDetailPage({
                   size={20}
                   className={`mx-auto mb-1 ${rating === r ? 'fill-current' : ''}`}
                 />
-                {r === 3 ? 'Good' : r === 2 ? 'OK' : 'Bad'}
+                {r === 3 ? 'Buena' : r === 2 ? 'Regular' : 'Mala'}
               </button>
             ))}
           </div>
         </Card>
 
         {/* Wifi / data signal */}
-        <Card>
-          <CardTitle>Internet / Data Signal</CardTitle>
+        <Card className="!rounded-2xl">
+          <CardTitle>Señal de Internet / Datos</CardTitle>
           <p className="text-xs text-text-muted mt-0.5">
-            Poor signal makes a store hard to work — it will be scored down heavily.
+            Una señal mala hace difícil trabajar la tienda — baja mucho su puntaje.
           </p>
           <div className="mt-2 flex gap-2">
             {wifiOptions.map((opt) => {
@@ -464,10 +464,10 @@ export default function StopDetailPage({
         </Card>
 
         {/* Purchase totals */}
-        <Card>
+        <Card className="!rounded-2xl">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Purchase Totals</CardTitle>
+              <CardTitle>Totales de Compra</CardTitle>
               <p className="text-xs text-text-muted mt-0.5">
                 Ingresa manualmente o importa desde tu calculadora de Amazon.
               </p>
@@ -535,9 +535,9 @@ export default function StopDetailPage({
         </Card>
 
         {/* Receipt photos */}
-        <Card>
+        <Card className="!rounded-2xl">
           <div className="flex items-center justify-between">
-            <CardTitle>Receipts</CardTitle>
+            <CardTitle>Recibos</CardTitle>
             <Button
               size="sm"
               variant="outline"
@@ -550,7 +550,7 @@ export default function StopDetailPage({
               ) : (
                 <Camera size={14} />
               )}
-              {uploadingReceipt ? 'Uploading...' : 'Take Photo'}
+              {uploadingReceipt ? 'Subiendo...' : 'Tomar Foto'}
             </Button>
             <input
               ref={fileInputRef}
@@ -563,7 +563,7 @@ export default function StopDetailPage({
           </div>
 
           {receiptUrls.length === 0 ? (
-            <p className="mt-2 text-sm text-text-muted">No receipts saved yet.</p>
+            <p className="mt-2 text-sm text-text-muted">Aún no hay recibos guardados.</p>
           ) : (
             <div className="mt-3 grid grid-cols-3 gap-2">
               {receiptUrls.map((url) => (
@@ -583,12 +583,12 @@ export default function StopDetailPage({
         </Card>
 
         {/* Notes */}
-        <Card>
-          <CardTitle>Notes</CardTitle>
+        <Card className="!rounded-2xl">
+          <CardTitle>Notas</CardTitle>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Clearance quality, competition, sections worth checking..."
+            placeholder="Calidad del clearance, competencia, secciones que valen la pena..."
             className="mt-2 w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             rows={3}
           />
@@ -596,7 +596,7 @@ export default function StopDetailPage({
 
         {/* Products */}
         {products.length > 0 && (
-          <Card>
+          <Card className="!rounded-2xl">
             <CardTitle>Productos Importados</CardTitle>
             <p className="text-xs text-text-muted mt-0.5">
               Agrupado por código · Hist. = qty comprada en otras tiendas de esta ruta.
@@ -646,7 +646,7 @@ export default function StopDetailPage({
 
         <Button fullWidth size="lg" onClick={saveAndComplete} loading={saving} className="gap-2">
           <Save size={18} />
-          Save & Complete Visit
+          Guardar y Completar Visita
         </Button>
       </div>
     </AppShell>

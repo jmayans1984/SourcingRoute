@@ -384,7 +384,7 @@ export default function DashboardPage() {
               <Button
                 size="lg"
                 fullWidth
-                className="gap-2 !bg-white !text-indigo-700 shadow-lg hover:!bg-blue-50 md:w-auto"
+                className="gap-2 !bg-none !bg-white !text-indigo-700 !shadow-lg hover:!bg-blue-50 md:w-auto"
               >
                 <Route size={20} />
                 Crear Nueva Ruta

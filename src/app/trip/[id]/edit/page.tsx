@@ -289,12 +289,12 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
     return (
       <AppShell>
         <div className="mx-auto max-w-lg p-8 text-center">
-          <p className="font-medium">This route can no longer be edited</p>
+          <p className="font-medium">Esta ruta ya no se puede editar</p>
           <p className="mt-1 text-sm text-text-muted">
-            Only routes that haven&apos;t started yet can be changed manually.
+            Solo las rutas que aún no han iniciado se pueden cambiar manualmente.
           </p>
           <Link href={`/trip/${id}`} className="mt-4 inline-block">
-            <Button variant="outline">Back to trip</Button>
+            <Button variant="outline">Volver a la ruta</Button>
           </Link>
         </div>
       </AppShell>
@@ -308,26 +308,26 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
         <Link href={`/trip/${id}`}>
           <Button variant="ghost" size="sm" className="gap-1">
             <ArrowLeft size={16} />
-            Back
+            Volver
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold">Edit Route</h1>
+        <h1 className="text-2xl font-bold">Editar Ruta</h1>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_1.3fr]">
         {/* Left column: trip details */}
         <div className="space-y-4">
-          <Card>
-            <CardTitle>Route Info</CardTitle>
+          <Card className="!rounded-2xl">
+            <CardTitle>Info de la Ruta</CardTitle>
             <div className="mt-3 space-y-3">
               <Input
-                label="Route Name"
+                label="Nombre"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Orlando Saturday Run"
+                placeholder="Ej: Sábado en Orlando"
               />
               <Input
-                label="Route Date"
+                label="Fecha"
                 type="date"
                 value={tripDate}
                 onChange={(e) => setTripDate(e.target.value)}
@@ -335,11 +335,11 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
             </div>
           </Card>
 
-          <Card>
-            <CardTitle>Location</CardTitle>
+          <Card className="!rounded-2xl">
+            <CardTitle>Ubicación</CardTitle>
             <div className="mt-3 space-y-3">
               <LocationInput
-                label="Starting Point"
+                label="Punto de inicio"
                 value={startAddress}
                 onChange={(val, lat, lng) => {
                   setStartAddress(val);
@@ -348,14 +348,14 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
                 }}
               />
               <Toggle
-                label="Return to start"
-                description="Use starting point as final destination"
+                label="Volver al inicio"
+                description="Usar el punto de inicio como destino final"
                 checked={roundTrip}
                 onChange={setRoundTrip}
               />
               {!roundTrip && (
                 <LocationInput
-                  label="End Point"
+                  label="Punto final"
                   value={endAddress}
                   onChange={(val, lat, lng) => {
                     setEndAddress(val);
@@ -367,19 +367,19 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
             </div>
           </Card>
 
-          <Card>
-            <CardTitle>Settings</CardTitle>
+          <Card className="!rounded-2xl">
+            <CardTitle>Ajustes</CardTitle>
             <div className="mt-3 space-y-3">
               <Input
-                label="Default Time per Store (minutes)"
+                label="Tiempo por tienda (minutos)"
                 type="number"
                 min={10}
                 max={120}
                 value={defaultDuration}
                 onChange={(e) => setDefaultDuration(Number(e.target.value))}
               />
-              <Toggle label="Avoid Tolls" checked={avoidTolls} onChange={setAvoidTolls} />
-              <Toggle label="Avoid Highways" checked={avoidHighways} onChange={setAvoidHighways} />
+              <Toggle label="Evitar peajes" checked={avoidTolls} onChange={setAvoidTolls} />
+              <Toggle label="Evitar autopistas" checked={avoidHighways} onChange={setAvoidHighways} />
             </div>
           </Card>
 
@@ -392,20 +392,20 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
             className="gap-2"
           >
             <Save size={18} />
-            Save & Recalculate Route
+            Guardar y Recalcular Ruta
           </Button>
         </div>
 
         {/* Right column: stops list + add store */}
         <div className="space-y-4">
-          <Card>
-            <CardTitle>Add a Store</CardTitle>
+          <Card className="!rounded-2xl">
+            <CardTitle>Agregar una Tienda</CardTitle>
             <div className="mt-3 flex gap-2">
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search by name, e.g. Ross Kissimmee"
+                placeholder="Busca por nombre, ej: Ross Kissimmee"
               />
               <Button onClick={handleSearch} loading={searching} className="shrink-0 px-3">
                 <Search size={18} />
@@ -431,7 +431,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
                       className="shrink-0 gap-1"
                     >
                       <Plus size={14} />
-                      Add
+                      Agregar
                     </Button>
                   </div>
                 ))}
@@ -439,9 +439,9 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
             )}
           </Card>
 
-          <Card>
+          <Card className="!rounded-2xl">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle>Stops ({stops.length})</CardTitle>
+              <CardTitle>Paradas ({stops.length})</CardTitle>
               <Button
                 size="sm"
                 variant="outline"
@@ -449,16 +449,16 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
                 loading={removingOnly}
                 disabled={removedStoreIds.length === 0}
                 className="gap-1 shrink-0"
-                title="Delete only the removed stops — keeps everything else exactly as-is, no recalculation"
+                title="Elimina solo las paradas quitadas — deja todo lo demás igual, sin recalcular"
               >
                 <Trash2 size={14} />
-                Save removals only
+                Guardar solo quitadas
               </Button>
             </div>
 
             {stops.length === 0 ? (
               <p className="mt-3 text-sm text-text-muted">
-                No stops yet. Search above to add stores to this route.
+                Sin paradas aún. Busca arriba para agregar tiendas a esta ruta.
               </p>
             ) : (
               <div className="mt-3 space-y-2">
