@@ -202,7 +202,7 @@ export default function StoresPage() {
 
   return (
     <AppShell>
-      <Header title="Store History" />
+      <Header title="Historial de Tiendas" />
 
       <div className="space-y-4 p-4 md:p-0">
         {/* View toggle: individual stores vs brand rollup */}
@@ -355,7 +355,7 @@ export default function StoresPage() {
                   : 'bg-surface border border-border text-text-secondary'
               }`}
             >
-              {s === 'recent' ? 'Recent' : s === 'rating' ? 'Best Rated' : s === 'profit' ? 'Most Profit' : 'Most Visits'}
+              {s === 'recent' ? 'Recientes' : s === 'rating' ? 'Mejor Calificadas' : s === 'profit' ? 'Más Utilidad' : 'Más Visitas'}
             </button>
           ))}
         </div>
@@ -370,7 +370,7 @@ export default function StoresPage() {
                   : 'bg-surface border border-border text-text-secondary'
               }`}
             >
-              All
+              Todas
             </button>
             {chains.map((chain) => (
               <button
@@ -394,11 +394,13 @@ export default function StoresPage() {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         ) : filtered.length === 0 ? (
-          <Card className="text-center py-8">
-            <Star size={40} className="mx-auto text-text-muted mb-3" />
-            <p className="font-medium">No stores visited yet</p>
-            <p className="text-sm text-text-muted mt-1">
-              Complete a sourcing trip to see your store history
+          <Card className="!rounded-2xl py-8 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100">
+              <Star size={22} className="text-indigo-500" />
+            </div>
+            <p className="font-semibold">Aún no has visitado tiendas</p>
+            <p className="mt-1 text-sm text-text-muted">
+              Completa una ruta de sourcing para ver tu historial
             </p>
           </Card>
         ) : (
@@ -413,10 +415,10 @@ export default function StoresPage() {
                     </div>
                     <p className="text-xs text-text-muted truncate">{item.store.address}</p>
                     <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
-                      <span>{item.visitCount} visits</span>
+                      <span>{item.visitCount} visitas</span>
                       <span>·</span>
                       <span className="text-secondary font-medium">
-                        ~${item.avgProfit.toFixed(0)}/visit
+                        ~${item.avgProfit.toFixed(0)}/visita
                       </span>
                       {item.avgRating && (
                         <>

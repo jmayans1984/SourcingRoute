@@ -137,20 +137,20 @@ export default function ProfilePage() {
 
   return (
     <AppShell>
-      <Header title="Profile" />
+      <Header title="Perfil" />
 
       <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
-        <Card>
-          <CardTitle>Personal Info</CardTitle>
+        <Card className="!rounded-2xl">
+          <CardTitle>Información Personal</CardTitle>
           <div className="mt-3 space-y-3">
             <Input
-              label="Full Name"
+              label="Nombre completo"
               value={profile.full_name || ''}
               onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))}
-              placeholder="Your name"
+              placeholder="Tu nombre"
             />
             <LocationInput
-              label="Home Address"
+              label="Dirección de casa"
               value={profile.home_address || ''}
               onChange={(val, lat, lng) =>
                 setProfile((p) => ({
@@ -160,16 +160,16 @@ export default function ProfilePage() {
                   home_lng: lng ?? null,
                 }))
               }
-              placeholder="Your home base for routes"
+              placeholder="Tu punto de partida para las rutas"
             />
           </div>
         </Card>
 
-        <Card>
-          <CardTitle>Default Settings</CardTitle>
+        <Card className="!rounded-2xl">
+          <CardTitle>Ajustes Predeterminados</CardTitle>
           <div className="mt-3 space-y-3">
             <Input
-              label="Default Radius (miles)"
+              label="Radio predeterminado (millas)"
               type="number"
               min={5}
               max={100}
@@ -179,7 +179,7 @@ export default function ProfilePage() {
               }
             />
             <Input
-              label="Default Time per Store (minutes)"
+              label="Tiempo por tienda (minutos)"
               type="number"
               min={10}
               max={120}
@@ -194,9 +194,11 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        <Card>
+        <Card className="!rounded-2xl">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet size={18} className="text-green-600" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+              <FileSpreadsheet size={16} />
+            </span>
             <CardTitle>Google Sheets — Calculadora Amazon</CardTitle>
           </div>
           <p className="mt-1 text-xs text-text-muted">
@@ -216,9 +218,11 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        <Card>
+        <Card className="!rounded-2xl">
           <div className="flex items-center gap-2">
-            <Wallet size={18} className="text-amber-600" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+              <Wallet size={16} />
+            </span>
             <CardTitle>Cuentas Contables — Gastos de Ruta</CardTitle>
           </div>
           <p className="mt-1 text-xs text-text-muted">
@@ -293,9 +297,11 @@ export default function ProfilePage() {
           )}
         </Card>
 
-        <Card>
-          <CardTitle>Your Custom Stores</CardTitle>
-          <p className="mt-1 text-xs text-text-muted">Add the stores you want to visit on your routes</p>
+        <Card className="!rounded-2xl">
+          <CardTitle>Tus Tiendas</CardTitle>
+          <p className="mt-1 text-xs text-text-muted">
+            Agrega las tiendas que quieres visitar en tus rutas
+          </p>
           <div className="mt-3">
             <CustomChainsInput
               chains={profile.preferred_chains || []}
@@ -306,12 +312,12 @@ export default function ProfilePage() {
 
         <Button fullWidth size="lg" onClick={handleSave} loading={saving} className="gap-2">
           <Save size={18} />
-          Save Profile
+          Guardar perfil
         </Button>
 
         <Button fullWidth variant="outline" onClick={handleSignOut} className="gap-2">
           <LogOut size={18} />
-          Sign Out
+          Cerrar sesión
         </Button>
       </div>
     </AppShell>

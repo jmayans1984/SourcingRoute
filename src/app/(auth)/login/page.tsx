@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin } from 'lucide-react';
+import { Route } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,48 +38,54 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm space-y-8">
+      <div className="w-full max-w-sm">
         <div className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white">
-            <MapPin size={28} />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-gradient text-white shadow-lg shadow-indigo-500/30">
+            <Route size={30} />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-text">SourcingRoute</h1>
-          <p className="mt-1 text-sm text-text-secondary">Sign in to plan your sourcing day</p>
+          <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-brand-gradient">
+            SourcingRoute
+          </h1>
+          <p className="mt-1.5 text-sm text-text-secondary">
+            Ingresa para planear tu día de sourcing
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-            autoComplete="email"
-          />
-          <Input
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Your password"
-            required
-            autoComplete="current-password"
-          />
+        <div className="mt-8 rounded-3xl border border-border bg-surface p-6 shadow-xl shadow-indigo-500/5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Correo"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@ejemplo.com"
+              required
+              autoComplete="email"
+            />
+            <Input
+              label="Contraseña"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Tu contraseña"
+              required
+              autoComplete="current-password"
+            />
 
-          {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-danger">{error}</p>
-          )}
+            {error && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-danger">{error}</p>
+            )}
 
-          <Button type="submit" fullWidth loading={loading}>
-            Sign in
-          </Button>
-        </form>
+            <Button type="submit" fullWidth size="lg" loading={loading}>
+              Iniciar sesión
+            </Button>
+          </form>
+        </div>
 
-        <p className="text-center text-sm text-text-secondary">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-medium text-primary hover:underline">
-            Sign up
+        <p className="mt-6 text-center text-sm text-text-secondary">
+          ¿No tienes cuenta?{' '}
+          <Link href="/register" className="font-semibold text-primary hover:underline">
+            Regístrate
           </Link>
         </p>
       </div>

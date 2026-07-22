@@ -32,11 +32,11 @@ export function Badge({
 }
 
 const stopStatusConfig: Record<StopStatus, { label: string; variant: BadgeVariant }> = {
-  pending: { label: 'Pending', variant: 'muted' },
-  on_the_way: { label: 'On the way', variant: 'info' },
-  arrived: { label: 'Arrived', variant: 'warning' },
-  completed: { label: 'Completed', variant: 'success' },
-  skipped: { label: 'Skipped', variant: 'muted' },
+  pending: { label: 'Pendiente', variant: 'muted' },
+  on_the_way: { label: 'En camino', variant: 'info' },
+  arrived: { label: 'Llegué', variant: 'warning' },
+  completed: { label: 'Completada', variant: 'success' },
+  skipped: { label: 'Saltada', variant: 'muted' },
 };
 
 export function StopStatusBadge({ status }: { status: StopStatus }) {
@@ -49,13 +49,13 @@ export function ScoreBadge({ score }: { score: number }) {
   if (score >= 75) variant = 'success';
   else if (score >= 50) variant = 'warning';
   else if (score >= 25) variant = 'default';
-  return <Badge variant={variant}>Score {score}</Badge>;
+  return <Badge variant={variant}>Pts {score}</Badge>;
 }
 
 const ratingLabels: Record<StoreRating, { label: string; variant: BadgeVariant }> = {
-  1: { label: 'Bad', variant: 'danger' },
-  2: { label: 'OK', variant: 'warning' },
-  3: { label: 'Good', variant: 'success' },
+  1: { label: 'Mala', variant: 'danger' },
+  2: { label: 'Regular', variant: 'warning' },
+  3: { label: 'Buena', variant: 'success' },
 };
 
 export function RatingBadge({ rating }: { rating: StoreRating }) {
@@ -64,9 +64,9 @@ export function RatingBadge({ rating }: { rating: StoreRating }) {
 }
 
 const wifiConfig: Record<WifiSignal, { label: string; variant: BadgeVariant }> = {
-  bad: { label: 'No signal', variant: 'danger' },
-  regular: { label: 'Weak signal', variant: 'warning' },
-  good: { label: 'Good signal', variant: 'success' },
+  bad: { label: 'Sin señal', variant: 'danger' },
+  regular: { label: 'Señal débil', variant: 'warning' },
+  good: { label: 'Buena señal', variant: 'success' },
 };
 
 export function WifiBadge({ signal }: { signal: WifiSignal }) {
@@ -81,10 +81,10 @@ export function WifiBadge({ signal }: { signal: WifiSignal }) {
 }
 
 const tripStatusConfig: Record<TripStatus, { label: string; variant: BadgeVariant }> = {
-  planning: { label: 'Planning', variant: 'muted' },
-  active: { label: 'Active', variant: 'info' },
-  completed: { label: 'Completed', variant: 'success' },
-  cancelled: { label: 'Cancelled', variant: 'danger' },
+  planning: { label: 'Planeando', variant: 'muted' },
+  active: { label: 'En ruta', variant: 'info' },
+  completed: { label: 'Completada', variant: 'success' },
+  cancelled: { label: 'Cancelada', variant: 'danger' },
 };
 
 export function TripStatusBadge({ status }: { status: TripStatus }) {

@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
-  --color-primary-light: #3b82f6;
+  --color-primary: #4f46e5;
+  --color-primary-dark: #4338ca;
+  --color-primary-light: #6366f1;
   --color-secondary: #059669;
   --color-secondary-dark: #047857;
   --color-accent: #f59e0b;
   --color-danger: #dc2626;
   --color-surface: #ffffff;
-  --color-surface-secondary: #f8fafc;
+  --color-surface-secondary: #f1f5f9;
   --color-border: #e2e8f0;
   --color-text: #0f172a;
   --color-text-secondary: #64748b;
@@ -25,6 +25,9 @@
   --color-status-arrived: #f59e0b;
   --color-status-completed: #16a34a;
   --color-status-skipped: #6b7280;
+
+  /* Brand gradient reused across hero surfaces and primary actions */
+  --gradient-brand: linear-gradient(135deg, #4f46e5 0%, #6d28d9 50%, #7c3aed 100%);
 }
 
 @layer base {
@@ -33,11 +36,40 @@
   }
 
   body {
-    @apply bg-surface-secondary text-text antialiased;
+    @apply text-text antialiased;
+    /* Soft, premium page backdrop instead of a flat gray */
+    background-color: #f6f7fb;
+    background-image:
+      radial-gradient(1100px 500px at 100% -5%, rgba(99, 102, 241, 0.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 0%, rgba(139, 92, 246, 0.08), transparent 55%);
+    background-attachment: fixed;
     font-family: system-ui, -apple-system, sans-serif;
   }
 
   input, select, textarea {
     @apply text-base;
+  }
+}
+
+@layer utilities {
+  .bg-brand-gradient {
+    background-image: var(--gradient-brand);
+  }
+  .text-brand-gradient {
+    background-image: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Hide scrollbars on horizontal filter rows while keeping scroll */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
