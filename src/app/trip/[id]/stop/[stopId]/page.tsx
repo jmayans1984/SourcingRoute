@@ -16,8 +16,6 @@ import {
   Navigation,
   ExternalLink,
   Star,
-  Plus,
-  Trash2,
   Save,
   Wifi,
   WifiOff,
@@ -26,6 +24,11 @@ import {
   X,
   Loader2,
   FileSpreadsheet,
+  Store as StoreIcon,
+  DollarSign,
+  TrendingUp,
+  Sparkles,
+  Package,
 } from 'lucide-react';
 
 interface StopWithStore extends TripStop {
@@ -363,99 +366,163 @@ export default function StopDetailPage({
     );
   }
 
+  const liveROI = totalSpent > 0 ? Math.round((projectedProfit / totalSpent) * 100) : 0;
+
   return (
     <AppShell>
       <Header title={stop.store.name} showBack />
 
-      <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
-        <Card className="!rounded-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold">{stop.store.name}</p>
-              <p className="text-sm text-text-muted">{stop.store.address}</p>
+      <div className="space-y-4 p-4 pb-28 md:mx-auto md:max-w-2xl md:p-0 md:pb-10">
+        {/* Store hero */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-xl shadow-indigo-500/25">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-16 right-16 h-52 w-52 rounded-full bg-fuchsia-400/20 blur-3xl" />
+
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
+                  <StoreIcon size={18} />
+                </span>
+                <StopStatusBadge status={stop.status} />
+              </div>
+              <h2 className="mt-3 truncate text-xl font-extrabold leading-tight">{stop.store.name}</h2>
+              <p className="mt-0.5 text-sm text-indigo-100/90">{stop.store.address}</p>
             </div>
-            <StopStatusBadge status={stop.status} />
           </div>
 
-          <div className="mt-3 flex gap-2">
+          <div className="relative mt-4 flex gap-2">
             <a
               href={buildWazeUrl(stop.store.lat, stop.store.lng)}
               target="_blank"
               rel="noopener noreferrer"
+              className="flex-1"
             >
-              <Button size="sm" variant="primary" className="gap-1">
-                <Navigation size={14} />
+              <button className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-indigo-700 shadow-md transition-colors hover:bg-blue-50">
+                <Navigation size={15} />
                 Waze
-              </Button>
+              </button>
             </a>
             <a
               href={buildGoogleMapsStopUrl(stop.store.lat, stop.store.lng)}
               target="_blank"
               rel="noopener noreferrer"
+              className="flex-1"
             >
-              <Button size="sm" variant="outline" className="gap-1">
-                <ExternalLink size={14} />
-                Google Maps
-              </Button>
+              <button className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white/15 px-3 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25">
+                <ExternalLink size={15} />
+                Maps
+              </button>
             </a>
           </div>
-        </Card>
+        </div>
+
+        {/* Live P&L summary — mirrors the totals below, updates as you type */}
+        <div className="grid grid-cols-3 gap-2 md:gap-3">
+          <Card className="!rounded-2xl !p-3 text-center">
+            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/20">
+              <DollarSign size={15} />
+            </div>
+            <p className="mt-1.5 text-base font-extrabold leading-tight">
+              ${totalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-[11px] text-text-muted">Gastado</p>
+          </Card>
+          <Card className="!rounded-2xl !p-3 text-center">
+            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20">
+              <TrendingUp size={15} />
+            </div>
+            <p className="mt-1.5 text-base font-extrabold leading-tight">
+              ${projectedSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-[11px] text-text-muted">Venta Proy.</p>
+          </Card>
+          <Card className="!rounded-2xl !p-3 text-center">
+            <div
+              className={`mx-auto flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-md ${
+                projectedProfit >= 0
+                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20'
+                  : 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/20'
+              }`}
+            >
+              <Sparkles size={15} />
+            </div>
+            <p
+              className={`mt-1.5 text-base font-extrabold leading-tight ${projectedProfit >= 0 ? 'text-emerald-600' : 'text-danger'}`}
+            >
+              ${projectedProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-[11px] text-text-muted">
+              Utilidad{liveROI !== 0 ? ` · ${liveROI}%` : ''}
+            </p>
+          </Card>
+        </div>
 
         {/* Rating */}
         <Card className="!rounded-2xl">
-          <CardTitle>Califica esta tienda</CardTitle>
-          <div className="mt-2 flex gap-2">
-            {([1, 2, 3] as StoreRating[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRating(r)}
-                className={`flex-1 rounded-xl border-2 py-3 text-center text-sm font-medium transition-colors ${
-                  rating === r
-                    ? r === 3
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : r === 2
-                        ? 'border-amber-500 bg-amber-50 text-amber-700'
-                        : 'border-red-500 bg-red-50 text-red-700'
-                    : 'border-border text-text-muted hover:border-primary/30'
-                }`}
-              >
-                <Star
-                  size={20}
-                  className={`mx-auto mb-1 ${rating === r ? 'fill-current' : ''}`}
-                />
-                {r === 3 ? 'Buena' : r === 2 ? 'Regular' : 'Mala'}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+              <Star size={16} />
+            </span>
+            <CardTitle>Califica esta tienda</CardTitle>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {([1, 2, 3] as StoreRating[]).map((r) => {
+              const selected = rating === r;
+              const sel =
+                r === 3
+                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : r === 2
+                    ? 'border-amber-500 bg-amber-500 text-white shadow-md shadow-amber-500/25'
+                    : 'border-rose-500 bg-rose-500 text-white shadow-md shadow-rose-500/25';
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRating(r)}
+                  className={`rounded-2xl border-2 py-3.5 text-center text-sm font-semibold transition-all ${
+                    selected ? sel : 'border-border text-text-muted hover:border-primary/40'
+                  }`}
+                >
+                  <Star size={22} className={`mx-auto mb-1 ${selected ? 'fill-current' : ''}`} />
+                  {r === 3 ? 'Buena' : r === 2 ? 'Regular' : 'Mala'}
+                </button>
+              );
+            })}
           </div>
         </Card>
 
         {/* Wifi / data signal */}
         <Card className="!rounded-2xl">
-          <CardTitle>Señal de Internet / Datos</CardTitle>
-          <p className="text-xs text-text-muted mt-0.5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+              <Wifi size={16} />
+            </span>
+            <CardTitle>Señal de Internet / Datos</CardTitle>
+          </div>
+          <p className="mt-1 text-xs text-text-muted">
             Una señal mala hace difícil trabajar la tienda — baja mucho su puntaje.
           </p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             {wifiOptions.map((opt) => {
               const Icon = opt.icon;
-              const isSelected = wifiSignal === opt.value;
+              const selected = wifiSignal === opt.value;
+              const sel =
+                opt.value === 'good'
+                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : opt.value === 'regular'
+                    ? 'border-amber-500 bg-amber-500 text-white shadow-md shadow-amber-500/25'
+                    : 'border-rose-500 bg-rose-500 text-white shadow-md shadow-rose-500/25';
               return (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setWifiSignal(opt.value)}
-                  className={`flex-1 rounded-xl border-2 py-3 text-center text-sm font-medium transition-colors ${
-                    isSelected
-                      ? opt.value === 'good'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : opt.value === 'regular'
-                          ? 'border-amber-500 bg-amber-50 text-amber-700'
-                          : 'border-red-500 bg-red-50 text-red-700'
-                      : 'border-border text-text-muted hover:border-primary/30'
+                  className={`rounded-2xl border-2 py-3.5 text-center text-sm font-semibold transition-all ${
+                    selected ? sel : 'border-border text-text-muted hover:border-primary/40'
                   }`}
                 >
-                  <Icon size={20} className="mx-auto mb-1" />
+                  <Icon size={22} className="mx-auto mb-1" />
                   {opt.label}
                 </button>
               );
@@ -465,37 +532,46 @@ export default function StopDetailPage({
 
         {/* Purchase totals */}
         <Card className="!rounded-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Totales de Compra</CardTitle>
-              <p className="text-xs text-text-muted mt-0.5">
-                Ingresa manualmente o importa desde tu calculadora de Amazon.
-              </p>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={importFromSheets}
-              disabled={importing}
-              className="gap-1.5 shrink-0 border-green-500 text-green-700 hover:bg-green-50"
-            >
-              {importing ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <FileSpreadsheet size={14} />
-              )}
-              {importing ? 'Importando...' : 'Importar Sheet'}
-            </Button>
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+              <DollarSign size={16} />
+            </span>
+            <CardTitle>Totales de Compra</CardTitle>
           </div>
 
+          {/* Import CTA — the fast path from the Amazon calculator sheet */}
+          <button
+            type="button"
+            onClick={importFromSheets}
+            disabled={importing}
+            className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3 text-left transition-colors hover:from-emerald-100 hover:to-teal-100 disabled:opacity-60"
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25">
+                {importing ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <FileSpreadsheet size={18} />
+                )}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">
+                  {importing ? 'Importando...' : 'Importar desde Google Sheets'}
+                </p>
+                <p className="text-xs text-emerald-700/70">Calculadora de Amazon · autocompleta los totales</p>
+              </div>
+            </div>
+            <ExternalLink size={16} className="shrink-0 text-emerald-600" />
+          </button>
+
           {importResult && (
-            <div className="mt-3 rounded-xl bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
-              ✓ Importado — <strong>{importResult.rowCount} producto{importResult.rowCount !== 1 ? 's' : ''}</strong> · hoja limpiada
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white">✓</span>
+              Importado — <strong>{importResult.rowCount} producto{importResult.rowCount !== 1 ? 's' : ''}</strong> · hoja limpiada
             </div>
           )}
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid grid-cols-2 gap-3">
             <Input
               label="Gastado"
               type="number"
@@ -532,85 +608,33 @@ export default function StopDetailPage({
               placeholder="$0.00"
             />
           </div>
-        </Card>
-
-        {/* Receipt photos */}
-        <Card className="!rounded-2xl">
-          <div className="flex items-center justify-between">
-            <CardTitle>Recibos</CardTitle>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingReceipt}
-              className="gap-1"
-            >
-              {uploadingReceipt ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Camera size={14} />
-              )}
-              {uploadingReceipt ? 'Subiendo...' : 'Tomar Foto'}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleReceiptCapture}
-              className="hidden"
-            />
-          </div>
-
-          {receiptUrls.length === 0 ? (
-            <p className="mt-2 text-sm text-text-muted">Aún no hay recibos guardados.</p>
-          ) : (
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {receiptUrls.map((url) => (
-                <div key={url} className="relative aspect-square overflow-hidden rounded-lg border border-border">
-                  <Image src={url} alt="Receipt" fill className="object-cover" unoptimized />
-                  <button
-                    type="button"
-                    onClick={() => removeReceipt(url)}
-                    className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Notes */}
-        <Card className="!rounded-2xl">
-          <CardTitle>Notas</CardTitle>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Calidad del clearance, competencia, secciones que valen la pena..."
-            className="mt-2 w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            rows={3}
-          />
+          <p className="mt-2 text-xs text-text-muted">
+            Al editar «Gastado» o «Artículos», la venta y utilidad se recalculan proporcionalmente.
+          </p>
         </Card>
 
         {/* Products */}
         {products.length > 0 && (
           <Card className="!rounded-2xl">
-            <CardTitle>Productos Importados</CardTitle>
-            <p className="text-xs text-text-muted mt-0.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                <Package size={16} />
+              </span>
+              <CardTitle>Productos Importados</CardTitle>
+            </div>
+            <p className="mt-1 text-xs text-text-muted">
               Agrupado por código · Hist. = qty comprada en otras tiendas de esta ruta.
             </p>
             <div className="mt-3 overflow-x-auto -mx-4 px-4">
               <table className="w-full text-xs min-w-[500px]">
                 <thead>
-                  <tr className="border-b border-border text-text-muted">
-                    <th className="pb-2 text-left font-medium">Producto</th>
-                    <th className="pb-2 text-right font-medium">Qty</th>
-                    <th className="pb-2 text-right font-medium">COGS</th>
-                    <th className="pb-2 text-right font-medium">Venta</th>
-                    <th className="pb-2 text-right font-medium">Hist.</th>
-                    <th className="pb-2 text-right font-medium">Utilidad</th>
+                  <tr className="border-b border-border bg-surface-secondary text-text-muted">
+                    <th className="rounded-l-lg px-2 py-2 text-left font-semibold">Producto</th>
+                    <th className="px-2 py-2 text-right font-semibold">Qty</th>
+                    <th className="px-2 py-2 text-right font-semibold">COGS</th>
+                    <th className="px-2 py-2 text-right font-semibold">Venta</th>
+                    <th className="px-2 py-2 text-right font-semibold">Hist.</th>
+                    <th className="rounded-r-lg px-2 py-2 text-right font-semibold">Utilidad</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -622,32 +646,132 @@ export default function StopDetailPage({
                     const code    = p.upc || p.asin || '';
                     return (
                       <tr key={i} className="text-text">
-                        <td className="py-2 pr-3 max-w-[160px]">
+                        <td className="px-2 py-2 pr-3 max-w-[160px]">
                           <p className="truncate font-medium">{p.product_name}</p>
                           {code && <p className="text-text-muted truncate">{code}</p>}
                         </td>
-                        <td className="py-2 text-right font-semibold">{p.quantity_bought}</td>
-                        <td className="py-2 text-right">${cogs.toFixed(2)}</td>
-                        <td className="py-2 text-right">${sales.toFixed(2)}</td>
-                        <td className={`py-2 text-right font-semibold ${hist > 0 ? 'text-amber-600' : 'text-text-muted'}`}>
+                        <td className="px-2 py-2 text-right font-semibold">{p.quantity_bought}</td>
+                        <td className="px-2 py-2 text-right">${cogs.toFixed(2)}</td>
+                        <td className="px-2 py-2 text-right">${sales.toFixed(2)}</td>
+                        <td className={`px-2 py-2 text-right font-semibold ${hist > 0 ? 'text-amber-600' : 'text-text-muted'}`}>
                           {hist > 0 ? hist : '—'}
                         </td>
-                        <td className={`py-2 text-right font-medium ${profit > 0 ? 'text-green-600' : 'text-danger'}`}>
+                        <td className={`px-2 py-2 text-right font-medium ${profit > 0 ? 'text-green-600' : 'text-danger'}`}>
                           ${profit.toFixed(2)}
                         </td>
                       </tr>
                     );
                   })}
+                  <tr className="border-t-2 border-border font-bold text-text">
+                    <td className="px-2 py-2">Total</td>
+                    <td className="px-2 py-2 text-right">
+                      {products.reduce((s, p) => s + p.quantity_bought, 0)}
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      ${products.reduce((s, p) => s + (p.total_cost ?? p.buy_cost * p.quantity_bought), 0).toFixed(2)}
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      ${products.reduce((s, p) => s + (p.total_sales ?? p.estimated_sale_price * p.quantity_bought), 0).toFixed(2)}
+                    </td>
+                    <td className="px-2 py-2 text-right text-text-muted">—</td>
+                    <td className="px-2 py-2 text-right text-green-600">
+                      ${products.reduce((s, p) => s + (p.total_profit ?? (p.estimated_sale_price - p.buy_cost) * p.quantity_bought), 0).toFixed(2)}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </Card>
         )}
 
-        <Button fullWidth size="lg" onClick={saveAndComplete} loading={saving} className="gap-2">
-          <Save size={18} />
-          Guardar y Completar Visita
-        </Button>
+        {/* Receipt photos */}
+        <Card className="!rounded-2xl">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-600">
+              <Camera size={16} />
+            </span>
+            <CardTitle>Recibos</CardTitle>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleReceiptCapture}
+            className="hidden"
+          />
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {receiptUrls.map((url) => (
+              <div key={url} className="relative aspect-square overflow-hidden rounded-xl border border-border">
+                <Image src={url} alt="Recibo" fill className="object-cover" unoptimized />
+                <button
+                  type="button"
+                  onClick={() => removeReceipt(url)}
+                  className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white transition-colors hover:bg-black/80"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingReceipt}
+              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-text-muted transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-60"
+            >
+              {uploadingReceipt ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <Camera size={20} />
+              )}
+              <span className="text-[11px] font-medium">
+                {uploadingReceipt ? 'Subiendo...' : 'Tomar Foto'}
+              </span>
+            </button>
+          </div>
+        </Card>
+
+        {/* Notes */}
+        <Card className="!rounded-2xl">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+              <FileSpreadsheet size={16} />
+            </span>
+            <CardTitle>Notas</CardTitle>
+          </div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Calidad del clearance, competencia, secciones que valen la pena..."
+            className="mt-3 w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            rows={3}
+          />
+        </Card>
+
+        {/* Desktop save button (mobile uses the sticky bar below) */}
+        <div className="hidden md:block">
+          <Button fullWidth size="lg" onClick={saveAndComplete} loading={saving} className="gap-2">
+            <Save size={18} />
+            Guardar y Completar Visita
+          </Button>
+        </div>
+      </div>
+
+      {/* Sticky save bar — mobile, sits above the bottom nav */}
+      <div className="fixed inset-x-0 bottom-16 z-40 border-t border-border bg-surface/95 p-3 backdrop-blur-md safe-bottom md:hidden">
+        <div className="mx-auto flex max-w-lg items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-text-muted">Utilidad proyectada</p>
+            <p className={`text-lg font-extrabold leading-tight ${projectedProfit >= 0 ? 'text-emerald-600' : 'text-danger'}`}>
+              ${projectedProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              {liveROI !== 0 && <span className="ml-1 text-xs font-semibold text-text-muted">{liveROI}%</span>}
+            </p>
+          </div>
+          <Button size="lg" onClick={saveAndComplete} loading={saving} className="shrink-0 gap-2">
+            <Save size={18} />
+            Completar
+          </Button>
+        </div>
       </div>
     </AppShell>
   );
