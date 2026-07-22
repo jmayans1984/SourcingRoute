@@ -11,7 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { normalizeBrand } from '@/utils/brands';
 import type { Store, StoreVisit, StoreRating } from '@/types/database';
-import { ChevronRight, Filter, Star, Heart, Plus, Trash2 } from 'lucide-react';
+import {
+  ChevronRight,
+  Heart,
+  Plus,
+  Trash2,
+  Store as StoreIcon,
+  DollarSign,
+  Tag,
+  Award,
+} from 'lucide-react';
 
 interface StoreWithStats {
   store: Store;
@@ -183,6 +192,11 @@ export default function StoresPage() {
 
   const maxBrandItems = Math.max(...brandStats.map((b) => b.itemsBought), 1);
 
+  // Aggregate stats for the hero
+  const totalVisits = stores.reduce((s, x) => s + x.visitCount, 0);
+  const totalItemsAll = stores.reduce((s, x) => s + x.itemsBought, 0);
+  const totalSpentAll = stores.reduce((s, x) => s + x.totalSpent, 0);
+
   const filtered = stores
     .filter((s) => chainFilter === 'all' || s.store.chain === chainFilter)
     .sort((a, b) => {
@@ -205,31 +219,74 @@ export default function StoresPage() {
       <Header title="Historial de Tiendas" />
 
       <div className="space-y-4 p-4 md:p-0">
-        {/* View toggle: individual stores vs brand rollup */}
-        <div className="inline-flex rounded-xl border border-border bg-surface p-1">
-          <button
-            onClick={() => setViewMode('stores')}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-              viewMode === 'stores' ? 'bg-primary text-white' : 'text-text-secondary'
-            }`}
-          >
-            Por Tienda
-          </button>
-          <button
-            onClick={() => setViewMode('brands')}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-              viewMode === 'brands' ? 'bg-primary text-white' : 'text-text-secondary'
-            }`}
-          >
-            Por Marca
-          </button>
+        {/* Hero with aggregate stats */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-xl shadow-indigo-500/25">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-16 right-16 h-52 w-52 rounded-full bg-fuchsia-400/20 blur-3xl" />
+
+          <div className="relative">
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
+                <StoreIcon size={18} />
+              </span>
+              <div>
+                <h2 className="text-lg font-extrabold leading-tight">Mis Tiendas</h2>
+                <p className="text-xs text-indigo-100/90">
+                  {stores.length} {stores.length === 1 ? 'tienda' : 'tiendas'} · {totalVisits}{' '}
+                  {totalVisits === 1 ? 'visita' : 'visitas'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-2xl bg-white/10 p-3 text-center backdrop-blur-sm">
+                <p className="text-lg font-extrabold leading-tight">{stores.length}</p>
+                <p className="text-[11px] text-indigo-100/80">Tiendas</p>
+              </div>
+              <div className="rounded-2xl bg-white/10 p-3 text-center backdrop-blur-sm">
+                <p className="text-lg font-extrabold leading-tight">{totalItemsAll}</p>
+                <p className="text-[11px] text-indigo-100/80">Artículos</p>
+              </div>
+              <div className="rounded-2xl bg-white/10 p-3 text-center backdrop-blur-sm">
+                <p className="text-lg font-extrabold leading-tight">
+                  ${totalSpentAll.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-[11px] text-indigo-100/80">Gastado</p>
+              </div>
+            </div>
+
+            {/* View toggle */}
+            <div className="mt-4 inline-flex w-full gap-1 rounded-2xl bg-white/10 p-1 backdrop-blur-sm">
+              {([
+                { v: 'stores', label: 'Por Tienda' },
+                { v: 'brands', label: 'Por Marca' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.v}
+                  onClick={() => setViewMode(opt.v)}
+                  className={`flex-1 rounded-xl px-3 py-1.5 text-sm font-semibold transition-all ${
+                    viewMode === opt.v
+                      ? 'bg-white text-indigo-700 shadow-md'
+                      : 'text-indigo-100 hover:bg-white/10'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {viewMode === 'brands' ? (
           <div className="space-y-4">
             {/* Manage brands: this list drives the suggestions when creating a route */}
-            <Card>
-              <CardTitle>Mis Marcas</CardTitle>
+            <Card className="!rounded-2xl">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                  <Tag size={16} />
+                </span>
+                <CardTitle>Mis Marcas</CardTitle>
+              </div>
               <p className="mt-1 text-xs text-text-muted">
                 Crea las marcas que visitas. Aparecerán al crear una ruta.
               </p>
@@ -263,13 +320,13 @@ export default function StoresPage() {
                   {myBrands.map((b) => (
                     <div
                       key={b}
-                      className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary"
+                      className="flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-50 to-violet-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 ring-1 ring-indigo-100"
                     >
                       <span>{b}</span>
                       <button
                         type="button"
                         onClick={() => removeBrand(b)}
-                        className="transition-colors hover:text-primary/60"
+                        className="text-indigo-400 transition-colors hover:text-danger"
                         title={`Quitar ${b}`}
                       >
                         <Trash2 size={14} />
@@ -283,157 +340,178 @@ export default function StoresPage() {
             </Card>
 
             {loading ? (
-            <div className="flex items-center justify-center p-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-          ) : brandStats.length === 0 ? (
-            <Card className="py-8 text-center">
-              <Star size={40} className="mx-auto mb-3 text-text-muted" />
-              <p className="font-medium">Sin datos por marca todavía</p>
-              <p className="mt-1 text-sm text-text-muted">
-                Completa viajes de sourcing para ver el análisis por marca
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-text-muted">
-                Ordenado por artículos comprados — dónde consigues más mercancía
-              </p>
-              {brandStats.map((b, index) => (
-                <Card key={b.brand}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                        {index + 1}
-                      </span>
-                      <span className="font-semibold">{b.brand}</span>
-                      <span className="text-xs text-text-muted">
-                        {b.storeCount} {b.storeCount === 1 ? 'tienda' : 'tiendas'} · {b.visitCount}{' '}
-                        {b.visitCount === 1 ? 'visita' : 'visitas'}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">{b.itemsBought}</p>
-                      <p className="text-xs text-text-muted">artículos</p>
-                    </div>
-                  </div>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-secondary">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${(b.itemsBought / maxBrandItems) * 100}%` }}
-                    />
-                  </div>
-                  <div className="mt-1 flex items-center justify-between text-xs text-text-muted">
-                    <span>
-                      Gastado:{' '}
-                      <span className="font-medium text-secondary">
-                        ${b.totalSpent.toLocaleString()}
-                      </span>
-                    </span>
-                    <span>
-                      {b.visitCount > 0
-                        ? `${(b.itemsBought / b.visitCount).toFixed(1)} art./visita`
-                        : '--'}
-                    </span>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
+              <div className="flex items-center justify-center p-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            ) : brandStats.length === 0 ? (
+              <Card className="!rounded-2xl py-8 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100">
+                  <Award size={22} className="text-indigo-500" />
+                </div>
+                <p className="font-semibold">Sin datos por marca todavía</p>
+                <p className="mt-1 text-sm text-text-muted">
+                  Completa viajes de sourcing para ver el análisis por marca
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-2.5">
+                <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
+                  <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+                  Ranking por artículos
+                </p>
+                {brandStats.map((b, index) => {
+                  const medal =
+                    index === 0
+                      ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white'
+                      : index === 1
+                        ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white'
+                        : index === 2
+                          ? 'bg-gradient-to-br from-orange-400 to-amber-600 text-white'
+                          : 'bg-indigo-50 text-indigo-600';
+                  return (
+                    <Card key={b.brand} className="!rounded-2xl">
+                      <div className="flex items-center justify-between">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold shadow-sm ${medal}`}
+                          >
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-bold">{b.brand}</p>
+                            <p className="text-xs text-text-muted">
+                              {b.storeCount} {b.storeCount === 1 ? 'tienda' : 'tiendas'} · {b.visitCount}{' '}
+                              {b.visitCount === 1 ? 'visita' : 'visitas'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-extrabold leading-tight">{b.itemsBought}</p>
+                          <p className="text-[11px] text-text-muted">artículos</p>
+                        </div>
+                      </div>
+                      <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-surface-secondary">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 transition-all"
+                          style={{ width: `${(b.itemsBought / maxBrandItems) * 100}%` }}
+                        />
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between text-xs text-text-muted">
+                        <span>
+                          Gastado:{' '}
+                          <span className="font-semibold text-emerald-600">
+                            ${b.totalSpent.toLocaleString()}
+                          </span>
+                        </span>
+                        <span>
+                          {b.visitCount > 0
+                            ? `${(b.itemsBought / b.visitCount).toFixed(1)} art./visita`
+                            : '--'}
+                        </span>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : (
           <>
-        {/* Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {(['recent', 'rating', 'profit', 'visits'] as SortBy[]).map((s) => (
-            <button
-              key={s}
-              onClick={() => setSortBy(s)}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                sortBy === s
-                  ? 'bg-primary text-white'
-                  : 'bg-surface border border-border text-text-secondary'
-              }`}
-            >
-              {s === 'recent' ? 'Recientes' : s === 'rating' ? 'Mejor Calificadas' : s === 'profit' ? 'Más Utilidad' : 'Más Visitas'}
-            </button>
-          ))}
-        </div>
-
-        {chains.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            <button
-              onClick={() => setChainFilter('all')}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                chainFilter === 'all'
-                  ? 'bg-text text-surface'
-                  : 'bg-surface border border-border text-text-secondary'
-              }`}
-            >
-              Todas
-            </button>
-            {chains.map((chain) => (
-              <button
-                key={chain}
-                onClick={() => setChainFilter(chain)}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  chainFilter === chain
-                    ? 'bg-text text-surface'
-                    : 'bg-surface border border-border text-text-secondary'
-                }`}
-              >
-                {chain}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Store list */}
-        {loading ? (
-          <div className="flex items-center justify-center p-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <Card className="!rounded-2xl py-8 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100">
-              <Star size={22} className="text-indigo-500" />
+            {/* Sort filters */}
+            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+              {(['recent', 'rating', 'profit', 'visits'] as SortBy[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSortBy(s)}
+                  className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                    sortBy === s
+                      ? 'bg-brand-gradient text-white shadow-md shadow-indigo-500/25'
+                      : 'border border-border bg-surface text-text-secondary hover:border-primary/30'
+                  }`}
+                >
+                  {s === 'recent' ? 'Recientes' : s === 'rating' ? 'Mejor Calificadas' : s === 'profit' ? 'Más Utilidad' : 'Más Visitas'}
+                </button>
+              ))}
             </div>
-            <p className="font-semibold">Aún no has visitado tiendas</p>
-            <p className="mt-1 text-sm text-text-muted">
-              Completa una ruta de sourcing para ver tu historial
-            </p>
-          </Card>
-        ) : (
-          <div className="space-y-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:grid-cols-3">
-            {filtered.map((item) => (
-              <Link key={item.store.id} href={`/stores/${item.store.id}`}>
-                <Card className="flex items-center justify-between hover:bg-surface-secondary transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{item.store.name}</p>
-                      {item.isFavorite && <Heart size={14} className="text-danger fill-danger shrink-0" />}
-                    </div>
-                    <p className="text-xs text-text-muted truncate">{item.store.address}</p>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
-                      <span>{item.visitCount} visitas</span>
-                      <span>·</span>
-                      <span className="text-secondary font-medium">
-                        ~${item.avgProfit.toFixed(0)}/visita
-                      </span>
-                      {item.avgRating && (
-                        <>
-                          <span>·</span>
-                          <RatingBadge rating={Math.round(item.avgRating) as StoreRating} />
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="text-text-muted shrink-0" />
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
+
+            {chains.length > 1 && (
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+                <button
+                  onClick={() => setChainFilter('all')}
+                  className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                    chainFilter === 'all'
+                      ? 'bg-text text-surface'
+                      : 'border border-border bg-surface text-text-secondary hover:border-primary/30'
+                  }`}
+                >
+                  Todas
+                </button>
+                {chains.map((chain) => (
+                  <button
+                    key={chain}
+                    onClick={() => setChainFilter(chain)}
+                    className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                      chainFilter === chain
+                        ? 'bg-text text-surface'
+                        : 'border border-border bg-surface text-text-secondary hover:border-primary/30'
+                    }`}
+                  >
+                    {chain}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Store list */}
+            {loading ? (
+              <div className="flex items-center justify-center p-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <Card className="!rounded-2xl py-8 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100">
+                  <StoreIcon size={22} className="text-indigo-500" />
+                </div>
+                <p className="font-semibold">Aún no has visitado tiendas</p>
+                <p className="mt-1 text-sm text-text-muted">
+                  Completa una ruta de sourcing para ver tu historial
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-2.5 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:grid-cols-3">
+                {filtered.map((item) => (
+                  <Link key={item.store.id} href={`/stores/${item.store.id}`}>
+                    <Card className="!rounded-2xl flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-base font-extrabold text-white shadow-md shadow-indigo-500/20">
+                        {item.store.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate text-sm font-semibold">{item.store.name}</p>
+                          {item.isFavorite && (
+                            <Heart size={13} className="shrink-0 fill-danger text-danger" />
+                          )}
+                        </div>
+                        <p className="truncate text-xs text-text-muted">{item.store.address}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-surface-secondary px-1.5 py-0.5 text-text-secondary">
+                            <StoreIcon size={11} />
+                            {item.visitCount}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-600">
+                            <DollarSign size={11} />~{item.avgProfit.toFixed(0)}/v
+                          </span>
+                          {item.avgRating && (
+                            <RatingBadge rating={Math.round(item.avgRating) as StoreRating} />
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="shrink-0 text-text-muted" />
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
