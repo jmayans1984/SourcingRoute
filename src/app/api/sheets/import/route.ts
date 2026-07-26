@@ -179,11 +179,51 @@ async function getSheetId(req: NextRequest, method: 'GET' | 'POST'): Promise<str
 
 const RANGE = '001-01!A2:I';
 
+// Turns a raw Google/googleapis error into a specific, actionable Spanish
+// message the user can fix on their own — the most common failure is the sheet
+// not being shared (as Editor) with the service account.
+function describeError(err: unknown, sheetId: string | null): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const clientEmail =
+    process.env.GOOGLE_SHEETS_CLIENT_EMAIL || '(cuenta de servicio no configurada)';
+
+  if (/not found|entity was not found|notfound|404/i.test(msg)) {
+    return (
+      `No pude acceder a la hoja${sheetId ? ` (ID: ${sheetId})` : ''}. ` +
+      `Revisa dos cosas: 1) que el ID de la hoja en tu Perfil sea el correcto, y ` +
+      `2) que la hoja esté COMPARTIDA como Editor con esta cuenta: ${clientEmail}`
+    );
+  }
+  if (/permission|forbidden|403|caller does not have|the caller does not/i.test(msg)) {
+    return (
+      `La hoja está compartida pero sin permiso suficiente. Compártela como EDITOR ` +
+      `(no solo lector) con: ${clientEmail} — la importación necesita limpiarla al terminar.`
+    );
+  }
+  if (/parse range|unable to parse|invalid.*range|range/i.test(msg)) {
+    return (
+      `No encontré la pestaña «001-01» en la hoja. Renombra la pestaña a exactamente ` +
+      `001-01 (o crea una con ese nombre) y vuelve a intentar.`
+    );
+  }
+  if (/DECODER|private key|PEM|1E08010C|GOOGLE_SHEETS_PRIVATE_KEY/i.test(msg)) {
+    return (
+      `La llave privada (GOOGLE_SHEETS_PRIVATE_KEY) en Vercel tiene mal formato. ` +
+      `Pégala completa, incluyendo las líneas -----BEGIN PRIVATE KEY----- y -----END PRIVATE KEY-----.`
+    );
+  }
+  return msg;
+}
+
 export async function GET(req: NextRequest) {
+  let sheetId: string | null = null;
   try {
-    const sheetId = await getSheetId(req, 'GET');
+    sheetId = await getSheetId(req, 'GET');
     if (!sheetId) {
-      return NextResponse.json({ error: 'No Google Sheet ID configured. Add it in your profile.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No has configurado el ID de tu Google Sheet. Agrégalo en tu Perfil.' },
+        { status: 400 }
+      );
     }
 
     const auth   = getAuth();
@@ -197,18 +237,22 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(buildTotals(rows));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[sheets/import GET]', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const raw = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[sheets/import GET]', raw);
+    return NextResponse.json({ error: describeError(err, sheetId) }, { status: 500 });
   }
 }
 
 // POST: same as GET but clears the sheet after reading
 export async function POST(req: NextRequest) {
+  let sheetId: string | null = null;
   try {
-    const sheetId = await getSheetId(req, 'POST');
+    sheetId = await getSheetId(req, 'POST');
     if (!sheetId) {
-      return NextResponse.json({ error: 'No Google Sheet ID configured. Add it in your profile.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No has configurado el ID de tu Google Sheet. Agrégalo en tu Perfil.' },
+        { status: 400 }
+      );
     }
 
     const auth   = getAuth();
@@ -227,8 +271,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ...totals, cleared: shouldClear });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[sheets/import POST]', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const raw = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[sheets/import POST]', raw);
+    return NextResponse.json({ error: describeError(err, sheetId) }, { status: 500 });
   }
 }
