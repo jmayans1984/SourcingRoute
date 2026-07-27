@@ -150,6 +150,19 @@ function getAuth() {
   });
 }
 
+// Accept either a bare sheet ID or a full Google Sheets URL pasted by the user
+// (a very common cause of "entity not found"). Trims whitespace and pulls the
+// ID out of /spreadsheets/d/<ID>/ when a URL is given.
+function normalizeSheetId(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const match = s.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) return match[1];
+  // Not a URL — strip any accidental surrounding quotes/spaces and return.
+  return s.replace(/^["']|["']$/g, '').trim() || null;
+}
+
 async function getSheetId(req: NextRequest, method: 'GET' | 'POST'): Promise<string | null> {
   let sheetId: string | null = null;
 
@@ -174,7 +187,7 @@ async function getSheetId(req: NextRequest, method: 'GET' | 'POST'): Promise<str
     sheetId = (profile as { google_sheet_id?: string } | null)?.google_sheet_id ?? null;
   }
 
-  return sheetId;
+  return normalizeSheetId(sheetId);
 }
 
 const RANGE = '001-01!A2:I';
