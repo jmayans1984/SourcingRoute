@@ -280,6 +280,18 @@ export default function DashboardPage() {
   const filteredAvgCost =
     filteredTotalItems > 0 ? filteredTotalSpent / filteredTotalItems : 0;
 
+  // Averages track completed work as you go: a route counts as soon as it has
+  // at least one completed store (even if the whole route isn't finished), and
+  // routes not started yet don't dilute the average.
+  const routesWithProgress = filteredTrips.filter(
+    (t) => (tripTotals[t.id]?.storesVisited || 0) > 0
+  ).length;
+  const avgStoresPerActiveRoute =
+    routesWithProgress > 0 ? filteredTotalStores / routesWithProgress : 0;
+  // Profit per completed store — a per-store average, not per route.
+  const avgProfitPerStore =
+    filteredTotalStores > 0 ? filteredTotalProfit / filteredTotalStores : 0;
+
   // Previous period comparison
   const prevPeriod = getPreviousPeriodStart(period);
   let prevTotalSpent = 0;
@@ -442,7 +454,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Secondary stat strip */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Card className="!rounded-2xl">
             <div className="flex items-center gap-2 text-text-secondary">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
@@ -477,11 +489,31 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="mt-2 text-xl font-extrabold">
-              {filteredTrips.length > 0
-                ? (filteredTotalStores / filteredTrips.length).toFixed(1)
-                : '0'}
+              {avgStoresPerActiveRoute > 0 ? avgStoresPerActiveRoute.toFixed(1) : '0'}
             </p>
-            <p className="text-[11px] text-text-muted">{PERIOD_LONG[period]}</p>
+            <p className="text-[11px] text-text-muted">
+              {routesWithProgress > 0
+                ? `${routesWithProgress} ruta${routesWithProgress !== 1 ? 's' : ''} activa${routesWithProgress !== 1 ? 's' : ''}`
+                : PERIOD_LONG[period]}
+            </p>
+          </Card>
+          <Card className="!rounded-2xl">
+            <div className="flex items-center gap-2 text-text-secondary">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                <TrendingUp size={14} />
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide">
+                Utilidad/Tienda
+              </span>
+            </div>
+            <p className={`mt-2 text-xl font-extrabold ${avgProfitPerStore >= 0 ? 'text-text' : 'text-danger'}`}>
+              ${Math.round(avgProfitPerStore).toLocaleString()}
+            </p>
+            <p className="text-[11px] text-text-muted">
+              {filteredTotalStores > 0
+                ? `${filteredTotalStores} tienda${filteredTotalStores !== 1 ? 's' : ''} completada${filteredTotalStores !== 1 ? 's' : ''}`
+                : PERIOD_LONG[period]}
+            </p>
           </Card>
         </div>
 
