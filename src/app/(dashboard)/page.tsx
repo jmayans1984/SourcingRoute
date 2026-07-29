@@ -42,6 +42,7 @@ interface TripTotals {
   spent: number;
   storesVisited: number;
   totalStops: number;
+  profit: number;
 }
 
 type PeriodFilter = 'week' | 'month' | 'year' | 'all';
@@ -168,7 +169,7 @@ export default function DashboardPage() {
     if (allTrips && allTrips.length > 0) {
       const { data: allStops } = await supabase
         .from('trip_stops')
-        .select('trip_id, total_spent, total_items_bought, status')
+        .select('trip_id, total_spent, total_items_bought, estimated_profit, status')
         .in('trip_id', allTrips.map((t) => t.id));
 
       if (allStops) {
@@ -179,9 +180,11 @@ export default function DashboardPage() {
             spent: 0,
             storesVisited: 0,
             totalStops: 0,
+            profit: 0,
           };
           current.itemsBought += s.total_items_bought || 0;
           current.spent += s.total_spent || 0;
+          current.profit += s.estimated_profit || 0;
           current.totalStops += 1;
           if (s.status === 'completed') current.storesVisited += 1;
           totals[s.trip_id] = current;
@@ -268,6 +271,12 @@ export default function DashboardPage() {
     (sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0),
     0
   );
+  // Real projected profit = sum of each stop's estimated_profit across the
+  // filtered trips (not a ratio approximation, so every completed route counts).
+  const filteredTotalProfit = filteredTrips.reduce(
+    (sum, t) => sum + (tripTotals[t.id]?.profit || 0),
+    0
+  );
   const filteredAvgCost =
     filteredTotalItems > 0 ? filteredTotalSpent / filteredTotalItems : 0;
 
@@ -276,6 +285,7 @@ export default function DashboardPage() {
   let prevTotalSpent = 0;
   let prevTotalItems = 0;
   let prevTotalStores = 0;
+  let prevTotalProfit = 0;
 
   if (prevPeriod && period !== 'all') {
     const prevTrips = trips.filter((t) => {
@@ -288,13 +298,8 @@ export default function DashboardPage() {
       (sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0),
       0
     );
+    prevTotalProfit = prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.profit || 0), 0);
   }
-
-  // Profit estimate: spend ratio vs all-time profit
-  const allTimeSpent = trips.reduce((sum, t) => sum + (tripTotals[t.id]?.spent || 0), 0);
-  const profitRatio = allTimeSpent > 0 ? stats.totalProfit / allTimeSpent : 0;
-  const estimatedCurrentProfit = filteredTotalSpent * profitRatio;
-  const estimatedPrevProfit = prevTotalSpent * profitRatio;
 
   const today = new Date().toLocaleDateString('es-CO', {
     weekday: 'long',
@@ -315,16 +320,16 @@ export default function DashboardPage() {
       invert: false,
     },
     {
-      label: 'Ganancia Estimada',
-      value: `$${Math.round(estimatedCurrentProfit).toLocaleString()}`,
+      label: 'Utilidad Proyectada',
+      value: `$${Math.round(filteredTotalProfit).toLocaleString()}`,
       icon: TrendingUp,
       chip: 'bg-gradient-to-br from-emerald-500 to-teal-600',
       glow: 'shadow-emerald-500/20',
-      cur: estimatedCurrentProfit,
-      prev: estimatedPrevProfit,
+      cur: filteredTotalProfit,
+      prev: prevTotalProfit,
       prevLabel:
-        estimatedPrevProfit > 0
-          ? `vs $${Math.round(estimatedPrevProfit).toLocaleString()} anterior`
+        prevTotalProfit > 0
+          ? `vs $${Math.round(prevTotalProfit).toLocaleString()} anterior`
           : null,
       invert: false,
     },
@@ -549,7 +554,7 @@ export default function DashboardPage() {
                         <TripStatusBadge status={trip.status} />
                       </div>
 
-                      <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-surface-secondary p-2.5 text-center">
+                      <div className="mt-3 grid grid-cols-4 gap-2 rounded-xl bg-surface-secondary p-2.5 text-center">
                         <div>
                           <p className="text-[10px] font-semibold uppercase text-text-muted">Tiendas</p>
                           <p className="text-sm font-bold">
@@ -557,13 +562,19 @@ export default function DashboardPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-semibold uppercase text-text-muted">Artículos</p>
+                          <p className="text-[10px] font-semibold uppercase text-text-muted">Artíc.</p>
                           <p className="text-sm font-bold">{totals?.itemsBought || 0}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-semibold uppercase text-text-muted">Gastado</p>
-                          <p className="text-sm font-bold text-emerald-600">
+                          <p className="text-sm font-bold">
                             ${(totals?.spent || 0).toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase text-text-muted">Utilidad</p>
+                          <p className={`text-sm font-bold ${(totals?.profit || 0) >= 0 ? 'text-emerald-600' : 'text-danger'}`}>
+                            ${Math.round(totals?.profit || 0).toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -625,6 +636,7 @@ export default function DashboardPage() {
                         <th className="px-4 py-3 font-semibold">Tiendas</th>
                         <th className="px-4 py-3 font-semibold">Artículos</th>
                         <th className="px-4 py-3 font-semibold">Gastado</th>
+                        <th className="px-4 py-3 font-semibold">Utilidad</th>
                         <th className="px-4 py-3 font-semibold">Tiempo</th>
                         <th className="px-4 py-3 font-semibold">Estado</th>
                         <th className="px-4 py-3 text-right font-semibold">Acciones</th>
@@ -663,8 +675,11 @@ export default function DashboardPage() {
                             <td className="px-4 py-3 text-text-secondary">
                               {totals?.itemsBought || 0}
                             </td>
-                            <td className="px-4 py-3 font-semibold text-emerald-600">
+                            <td className="px-4 py-3 font-semibold text-text-secondary">
                               ${(totals?.spent || 0).toLocaleString()}
+                            </td>
+                            <td className={`px-4 py-3 font-semibold ${(totals?.profit || 0) >= 0 ? 'text-emerald-600' : 'text-danger'}`}>
+                              ${Math.round(totals?.profit || 0).toLocaleString()}
                             </td>
                             <td className="px-4 py-3 text-text-secondary">
                               {timeWorked > 0 ? formatDuration(timeWorked) : '--'}
