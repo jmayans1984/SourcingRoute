@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState, use, useRef } from 'react';
+import { useEffect, useState, use, useRef, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase-client';
 import { Header } from '@/components/layout/header';
 import { AppShell } from '@/components/layout/app-shell';
-import { Card, CardTitle } from '@/components/ui/card';
+import { Card, CardTitle, IconChip } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StopStatusBadge } from '@/components/ui/badge';
+import { toast } from '@/components/ui/toast';
 import { buildWazeUrl, buildGoogleMapsStopUrl } from '@/utils/navigation';
 import type { TripStop, Store, StoreRating, WifiSignal } from '@/types/database';
 import {
@@ -24,11 +25,11 @@ import {
   X,
   Loader2,
   FileSpreadsheet,
-  Store as StoreIcon,
   DollarSign,
   TrendingUp,
-  Sparkles,
   Package,
+  ChevronDown,
+  StickyNote,
 } from 'lucide-react';
 
 interface StopWithStore extends TripStop {
@@ -49,20 +50,49 @@ interface ProductEntry {
   notes: string;
 }
 
-const emptyProduct: ProductEntry = {
-  product_name: '',
-  buy_cost: 0,
-  estimated_sale_price: 0,
-  quantity_found: 1,
-  quantity_bought: 0,
-  notes: '',
-};
-
 const wifiOptions: { value: WifiSignal; label: string; icon: typeof Wifi }[] = [
   { value: 'bad', label: 'Sin señal', icon: WifiOff },
   { value: 'regular', label: 'Débil', icon: SignalMedium },
   { value: 'good', label: 'Buena', icon: Wifi },
 ];
+
+/** Collapsed-by-default section so the main form stays short. */
+function Collapsible({
+  title,
+  icon,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  summary?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Card padding={false} className="overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-surface-secondary"
+      >
+        {icon}
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold text-text">{title}</p>
+          {summary && <p className="truncate text-xs text-text-muted">{summary}</p>}
+        </div>
+        <ChevronDown
+          size={19}
+          className={`shrink-0 text-text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && <div className="border-t border-border p-4">{children}</div>}
+    </Card>
+  );
+}
 
 export default function StopDetailPage({
   params,
@@ -173,7 +203,7 @@ export default function StopDetailPage({
       if (!res.ok) throw new Error(data.error || 'Error importing');
 
       if (!data.rowCount) {
-        alert(
+        toast.error(
           'No se encontraron filas con datos en la hoja (001-01, desde la fila 2). La hoja NO fue borrada. Revisa que los datos estén en las columnas correctas.'
         );
         return;
@@ -188,8 +218,11 @@ export default function StopDetailPage({
         setProducts(data.products);
         await loadHistoricalQty(data.products.map((p: ProductEntry) => p.product_name));
       }
+      toast.success(
+        `Importado: ${data.rowCount} producto${data.rowCount !== 1 ? 's' : ''} · la hoja quedó limpia`
+      );
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al importar del Sheet');
+      toast.error(err instanceof Error ? err.message : 'Error al importar del Sheet');
     } finally {
       setImporting(false);
     }
@@ -212,20 +245,6 @@ export default function StopDetailPage({
       totals[row.product_name] = (totals[row.product_name] ?? 0) + (row.quantity_bought ?? 0);
     }
     setHistoricalQty(totals);
-  }
-
-  function addProduct() {
-    setProducts((prev) => [...prev, { ...emptyProduct }]);
-  }
-
-  function updateProduct(index: number, updates: Partial<ProductEntry>) {
-    setProducts((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, ...updates } : p))
-    );
-  }
-
-  function removeProduct(index: number) {
-    setProducts((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleReceiptCapture(e: React.ChangeEvent<HTMLInputElement>) {
@@ -253,7 +272,10 @@ export default function StopDetailPage({
         .createSignedUrl(path, 60 * 60 * 24 * 365);
       if (urlData?.signedUrl) {
         setReceiptUrls((prev) => [...prev, urlData.signedUrl]);
+        toast.success('Recibo guardado');
       }
+    } else {
+      toast.error('No se pudo subir el recibo');
     }
 
     setUploadingReceipt(false);
@@ -298,7 +320,7 @@ export default function StopDetailPage({
 
     if (updateError) {
       console.error('[saveAndComplete] trip_stops update failed:', updateError);
-      alert(`Error al guardar: ${updateError.message}`);
+      toast.error(`Error al guardar: ${updateError.message}`);
       setSaving(false);
       return;
     }
@@ -352,6 +374,7 @@ export default function StopDetailPage({
       }
     }
 
+    toast.success('Visita completada');
     router.push(`/trip/${id}`);
   }
 
@@ -367,41 +390,34 @@ export default function StopDetailPage({
   }
 
   const liveROI = totalSpent > 0 ? Math.round((projectedProfit / totalSpent) * 100) : 0;
+  const ratingLabel = rating === 3 ? 'Buena' : rating === 2 ? 'Regular' : rating === 1 ? 'Mala' : null;
+  const signalLabel = wifiOptions.find((o) => o.value === wifiSignal)?.label;
 
   return (
     <AppShell>
-      <Header title={stop.store.name} showBack />
+      <Header title={stop.store.name} subtitle={stop.store.address} showBack />
 
-      <div className="space-y-4 p-4 pb-28 md:mx-auto md:max-w-2xl md:p-0 md:pb-10">
-        {/* Store hero */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-xl shadow-indigo-500/25">
-          <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-16 right-16 h-52 w-52 rounded-full bg-fuchsia-400/20 blur-3xl" />
-
-          <div className="relative flex items-start justify-between gap-3">
+      <div className="space-y-4 p-4 pb-32 md:mx-auto md:max-w-2xl md:p-0 md:pb-10">
+        {/* Store + navigation */}
+        <Card>
+          <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-                  <StoreIcon size={18} />
-                </span>
-                <StopStatusBadge status={stop.status} />
-              </div>
-              <h2 className="mt-3 truncate text-xl font-extrabold leading-tight">{stop.store.name}</h2>
-              <p className="mt-0.5 text-sm text-indigo-100/90">{stop.store.address}</p>
+              <p className="truncate font-semibold">{stop.store.name}</p>
+              <p className="truncate text-sm text-text-muted">{stop.store.address}</p>
             </div>
+            <StopStatusBadge status={stop.status} />
           </div>
-
-          <div className="relative mt-4 flex gap-2">
+          <div className="mt-3 flex gap-2">
             <a
               href={buildWazeUrl(stop.store.lat, stop.store.lng)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1"
             >
-              <button className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-indigo-700 shadow-md transition-colors hover:bg-blue-50">
-                <Navigation size={15} />
+              <Button fullWidth className="gap-1.5">
+                <Navigation size={16} />
                 Waze
-              </button>
+              </Button>
             </a>
             <a
               href={buildGoogleMapsStopUrl(stop.store.lat, stop.store.lng)}
@@ -409,145 +425,57 @@ export default function StopDetailPage({
               rel="noopener noreferrer"
               className="flex-1"
             >
-              <button className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white/15 px-3 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25">
-                <ExternalLink size={15} />
+              <Button fullWidth variant="outline" className="gap-1.5">
+                <ExternalLink size={16} />
                 Maps
-              </button>
+              </Button>
             </a>
           </div>
-        </div>
+        </Card>
 
-        {/* Live P&L summary — mirrors the totals below, updates as you type */}
-        <div className="grid grid-cols-3 gap-2 md:gap-3">
-          <Card className="!rounded-2xl !p-3 text-center">
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/20">
-              <DollarSign size={15} />
-            </div>
-            <p className="mt-1.5 text-base font-extrabold leading-tight">
+        {/* Live totals summary */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="text-center">
+            <p className="text-[11px] text-text-muted">Gastado</p>
+            <p className="mt-0.5 text-lg font-bold tabular">
               ${totalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
-            <p className="text-[11px] text-text-muted">Gastado</p>
           </Card>
-          <Card className="!rounded-2xl !p-3 text-center">
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20">
-              <TrendingUp size={15} />
-            </div>
-            <p className="mt-1.5 text-base font-extrabold leading-tight">
+          <Card className="text-center">
+            <p className="text-[11px] text-text-muted">Venta Proy.</p>
+            <p className="mt-0.5 text-lg font-bold tabular">
               ${projectedSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
-            <p className="text-[11px] text-text-muted">Venta Proy.</p>
           </Card>
-          <Card className="!rounded-2xl !p-3 text-center">
-            <div
-              className={`mx-auto flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-md ${
-                projectedProfit >= 0
-                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20'
-                  : 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/20'
-              }`}
-            >
-              <Sparkles size={15} />
-            </div>
-            <p
-              className={`mt-1.5 text-base font-extrabold leading-tight ${projectedProfit >= 0 ? 'text-emerald-600' : 'text-danger'}`}
-            >
-              ${projectedProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-            </p>
+          <Card className="text-center">
             <p className="text-[11px] text-text-muted">
               Utilidad{liveROI !== 0 ? ` · ${liveROI}%` : ''}
             </p>
+            <p
+              className={`mt-0.5 text-lg font-bold tabular ${projectedProfit >= 0 ? 'text-success' : 'text-danger'}`}
+            >
+              ${projectedProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </p>
           </Card>
         </div>
 
-        {/* Rating */}
-        <Card className="!rounded-2xl">
+        {/* Step 1 — totals */}
+        <Card>
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-              <Star size={16} />
-            </span>
-            <CardTitle>Califica esta tienda</CardTitle>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {([1, 2, 3] as StoreRating[]).map((r) => {
-              const selected = rating === r;
-              const sel =
-                r === 3
-                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
-                  : r === 2
-                    ? 'border-amber-500 bg-amber-500 text-white shadow-md shadow-amber-500/25'
-                    : 'border-rose-500 bg-rose-500 text-white shadow-md shadow-rose-500/25';
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRating(r)}
-                  className={`rounded-2xl border-2 py-3.5 text-center text-sm font-semibold transition-all ${
-                    selected ? sel : 'border-border text-text-muted hover:border-primary/40'
-                  }`}
-                >
-                  <Star size={22} className={`mx-auto mb-1 ${selected ? 'fill-current' : ''}`} />
-                  {r === 3 ? 'Buena' : r === 2 ? 'Regular' : 'Mala'}
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Wifi / data signal */}
-        <Card className="!rounded-2xl">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
-              <Wifi size={16} />
-            </span>
-            <CardTitle>Señal de Internet / Datos</CardTitle>
-          </div>
-          <p className="mt-1 text-xs text-text-muted">
-            Una señal mala hace difícil trabajar la tienda — baja mucho su puntaje.
-          </p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {wifiOptions.map((opt) => {
-              const Icon = opt.icon;
-              const selected = wifiSignal === opt.value;
-              const sel =
-                opt.value === 'good'
-                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
-                  : opt.value === 'regular'
-                    ? 'border-amber-500 bg-amber-500 text-white shadow-md shadow-amber-500/25'
-                    : 'border-rose-500 bg-rose-500 text-white shadow-md shadow-rose-500/25';
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setWifiSignal(opt.value)}
-                  className={`rounded-2xl border-2 py-3.5 text-center text-sm font-semibold transition-all ${
-                    selected ? sel : 'border-border text-text-muted hover:border-primary/40'
-                  }`}
-                >
-                  <Icon size={22} className="mx-auto mb-1" />
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Purchase totals */}
-        <Card className="!rounded-2xl">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+            <IconChip tone="primary">
               <DollarSign size={16} />
-            </span>
+            </IconChip>
             <CardTitle>Totales de Compra</CardTitle>
           </div>
 
-          {/* Import CTA — the fast path from the Amazon calculator sheet */}
           <button
             type="button"
             onClick={importFromSheets}
             disabled={importing}
-            className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3 text-left transition-colors hover:from-emerald-100 hover:to-teal-100 disabled:opacity-60"
+            className="mt-3 flex w-full items-center justify-between gap-3 rounded-xl border border-success/30 bg-success/[0.06] px-4 py-3 text-left transition-colors hover:bg-success/10 disabled:opacity-60"
           >
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-success/15 text-success">
                 {importing ? (
                   <Loader2 size={18} className="animate-spin" />
                 ) : (
@@ -555,26 +483,26 @@ export default function StopDetailPage({
                 )}
               </span>
               <div>
-                <p className="text-sm font-semibold text-emerald-800">
+                <p className="text-sm font-semibold text-text">
                   {importing ? 'Importando...' : 'Importar desde Google Sheets'}
                 </p>
-                <p className="text-xs text-emerald-700/70">Calculadora de Amazon · autocompleta los totales</p>
+                <p className="text-xs text-text-muted">Autocompleta todos los totales</p>
               </div>
             </div>
-            <ExternalLink size={16} className="shrink-0 text-emerald-600" />
           </button>
 
           {importResult && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white">✓</span>
-              Importado — <strong>{importResult.rowCount} producto{importResult.rowCount !== 1 ? 's' : ''}</strong> · hoja limpiada
-            </div>
+            <p className="mt-2.5 rounded-xl bg-success/10 px-3 py-2 text-xs text-success">
+              ✓ {importResult.rowCount} producto{importResult.rowCount !== 1 ? 's' : ''} importado
+              {importResult.rowCount !== 1 ? 's' : ''} · hoja limpiada
+            </p>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <Input
               label="Gastado"
               type="number"
+              inputMode="decimal"
               step="0.01"
               min="0"
               value={totalSpent || ''}
@@ -582,8 +510,9 @@ export default function StopDetailPage({
               placeholder="$0.00"
             />
             <Input
-              label="Artículos Comprados"
+              label="Artículos"
               type="number"
+              inputMode="numeric"
               min="0"
               value={totalItemsBought || ''}
               onChange={(e) => handleItemsChange(Number(e.target.value))}
@@ -592,6 +521,7 @@ export default function StopDetailPage({
             <Input
               label="Venta Proyectada"
               type="number"
+              inputMode="decimal"
               step="0.01"
               min="0"
               value={projectedSales || ''}
@@ -601,6 +531,7 @@ export default function StopDetailPage({
             <Input
               label="Utilidad Proyectada"
               type="number"
+              inputMode="decimal"
               step="0.01"
               min="0"
               value={projectedProfit || ''}
@@ -609,60 +540,94 @@ export default function StopDetailPage({
             />
           </div>
           <p className="mt-2 text-xs text-text-muted">
-            Al editar «Gastado» o «Artículos», la venta y utilidad se recalculan proporcionalmente.
+            Al editar «Gastado» o «Artículos», la venta y utilidad se recalculan solas.
           </p>
         </Card>
 
-        {/* Products */}
+        {/* Step 2 — rating */}
+        <Card>
+          <div className="flex items-center gap-2">
+            <IconChip tone="warning">
+              <Star size={16} />
+            </IconChip>
+            <CardTitle>¿Cómo estuvo la tienda?</CardTitle>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {([1, 2, 3] as StoreRating[]).map((r) => {
+              const selected = rating === r;
+              const sel =
+                r === 3
+                  ? 'border-success bg-success text-white'
+                  : r === 2
+                    ? 'border-warning bg-warning text-white'
+                    : 'border-danger bg-danger text-white';
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRating(r)}
+                  className={`min-h-[76px] rounded-xl border-2 py-3 text-center text-sm font-semibold transition-colors ${
+                    selected ? sel : 'border-border text-text-secondary hover:border-primary/40'
+                  }`}
+                >
+                  <Star size={22} className={`mx-auto mb-1.5 ${selected ? 'fill-current' : ''}`} />
+                  {r === 3 ? 'Buena' : r === 2 ? 'Regular' : 'Mala'}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Products (only when there are any) */}
         {products.length > 0 && (
-          <Card className="!rounded-2xl">
+          <Card>
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+              <IconChip tone="info">
                 <Package size={16} />
-              </span>
-              <CardTitle>Productos Importados</CardTitle>
+              </IconChip>
+              <CardTitle>Productos ({products.length})</CardTitle>
             </div>
             <p className="mt-1 text-xs text-text-muted">
-              Agrupado por código · Hist. = qty comprada en otras tiendas de esta ruta.
+              Agrupado por código · Hist. = comprados en otras tiendas de esta ruta.
             </p>
-            <div className="mt-3 overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-xs min-w-[500px]">
+            <div className="mt-3 -mx-4 overflow-x-auto px-4">
+              <table className="w-full min-w-[500px] text-xs tabular">
                 <thead>
-                  <tr className="border-b border-border bg-surface-secondary text-text-muted">
-                    <th className="rounded-l-lg px-2 py-2 text-left font-semibold">Producto</th>
-                    <th className="px-2 py-2 text-right font-semibold">Qty</th>
-                    <th className="px-2 py-2 text-right font-semibold">COGS</th>
-                    <th className="px-2 py-2 text-right font-semibold">Venta</th>
-                    <th className="px-2 py-2 text-right font-semibold">Hist.</th>
-                    <th className="rounded-r-lg px-2 py-2 text-right font-semibold">Utilidad</th>
+                  <tr className="border-b border-border text-text-secondary">
+                    <th className="px-2 py-2 text-left font-medium">Producto</th>
+                    <th className="px-2 py-2 text-right font-medium">Qty</th>
+                    <th className="px-2 py-2 text-right font-medium">COGS</th>
+                    <th className="px-2 py-2 text-right font-medium">Venta</th>
+                    <th className="px-2 py-2 text-right font-medium">Hist.</th>
+                    <th className="px-2 py-2 text-right font-medium">Utilidad</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {products.map((p, i) => {
-                    const cogs    = p.total_cost    ?? p.buy_cost * p.quantity_bought;
-                    const sales   = p.total_sales   ?? p.estimated_sale_price * p.quantity_bought;
-                    const profit  = p.total_profit  ?? (p.estimated_sale_price - p.buy_cost) * p.quantity_bought;
-                    const hist    = historicalQty[p.product_name] ?? 0;
-                    const code    = p.upc || p.asin || '';
+                    const cogs   = p.total_cost   ?? p.buy_cost * p.quantity_bought;
+                    const sales  = p.total_sales  ?? p.estimated_sale_price * p.quantity_bought;
+                    const profit = p.total_profit ?? (p.estimated_sale_price - p.buy_cost) * p.quantity_bought;
+                    const hist   = historicalQty[p.product_name] ?? 0;
+                    const code   = p.upc || p.asin || '';
                     return (
-                      <tr key={i} className="text-text">
-                        <td className="px-2 py-2 pr-3 max-w-[160px]">
+                      <tr key={i}>
+                        <td className="max-w-[160px] px-2 py-2 pr-3">
                           <p className="truncate font-medium">{p.product_name}</p>
-                          {code && <p className="text-text-muted truncate">{code}</p>}
+                          {code && <p className="truncate text-text-muted">{code}</p>}
                         </td>
                         <td className="px-2 py-2 text-right font-semibold">{p.quantity_bought}</td>
                         <td className="px-2 py-2 text-right">${cogs.toFixed(2)}</td>
                         <td className="px-2 py-2 text-right">${sales.toFixed(2)}</td>
-                        <td className={`px-2 py-2 text-right font-semibold ${hist > 0 ? 'text-amber-600' : 'text-text-muted'}`}>
+                        <td className={`px-2 py-2 text-right font-semibold ${hist > 0 ? 'text-warning' : 'text-text-muted'}`}>
                           {hist > 0 ? hist : '—'}
                         </td>
-                        <td className={`px-2 py-2 text-right font-medium ${profit > 0 ? 'text-green-600' : 'text-danger'}`}>
+                        <td className={`px-2 py-2 text-right font-medium ${profit > 0 ? 'text-success' : 'text-danger'}`}>
                           ${profit.toFixed(2)}
                         </td>
                       </tr>
                     );
                   })}
-                  <tr className="border-t-2 border-border font-bold text-text">
+                  <tr className="border-t-2 border-border font-semibold">
                     <td className="px-2 py-2">Total</td>
                     <td className="px-2 py-2 text-right">
                       {products.reduce((s, p) => s + p.quantity_bought, 0)}
@@ -674,7 +639,7 @@ export default function StopDetailPage({
                       ${products.reduce((s, p) => s + (p.total_sales ?? p.estimated_sale_price * p.quantity_bought), 0).toFixed(2)}
                     </td>
                     <td className="px-2 py-2 text-right text-text-muted">—</td>
-                    <td className="px-2 py-2 text-right text-green-600">
+                    <td className="px-2 py-2 text-right text-success">
                       ${products.reduce((s, p) => s + (p.total_profit ?? (p.estimated_sale_price - p.buy_cost) * p.quantity_bought), 0).toFixed(2)}
                     </td>
                   </tr>
@@ -684,14 +649,52 @@ export default function StopDetailPage({
           </Card>
         )}
 
-        {/* Receipt photos */}
-        <Card className="!rounded-2xl">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-600">
-              <Camera size={16} />
-            </span>
-            <CardTitle>Recibos</CardTitle>
+        {/* Optional details — collapsed so the main flow stays short */}
+        <Collapsible
+          title="Señal de internet"
+          summary={signalLabel ? `Registrada: ${signalLabel}` : 'Opcional · afecta el puntaje'}
+          icon={
+            <IconChip tone="info">
+              <Wifi size={16} />
+            </IconChip>
+          }
+        >
+          <div className="grid grid-cols-3 gap-2">
+            {wifiOptions.map((opt) => {
+              const Icon = opt.icon;
+              const selected = wifiSignal === opt.value;
+              const sel =
+                opt.value === 'good'
+                  ? 'border-success bg-success text-white'
+                  : opt.value === 'regular'
+                    ? 'border-warning bg-warning text-white'
+                    : 'border-danger bg-danger text-white';
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setWifiSignal(opt.value)}
+                  className={`min-h-[72px] rounded-xl border-2 py-3 text-center text-sm font-semibold transition-colors ${
+                    selected ? sel : 'border-border text-text-secondary hover:border-primary/40'
+                  }`}
+                >
+                  <Icon size={20} className="mx-auto mb-1.5" />
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
+        </Collapsible>
+
+        <Collapsible
+          title="Recibos"
+          summary={receiptUrls.length > 0 ? `${receiptUrls.length} guardado(s)` : 'Opcional'}
+          icon={
+            <IconChip tone="danger">
+              <Camera size={16} />
+            </IconChip>
+          }
+        >
           <input
             ref={fileInputRef}
             type="file"
@@ -700,16 +703,17 @@ export default function StopDetailPage({
             onChange={handleReceiptCapture}
             className="hidden"
           />
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {receiptUrls.map((url) => (
               <div key={url} className="relative aspect-square overflow-hidden rounded-xl border border-border">
                 <Image src={url} alt="Recibo" fill className="object-cover" unoptimized />
                 <button
                   type="button"
                   onClick={() => removeReceipt(url)}
-                  className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white transition-colors hover:bg-black/80"
+                  aria-label="Quitar recibo"
+                  className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
                 >
-                  <X size={12} />
+                  <X size={13} />
                 </button>
               </div>
             ))}
@@ -717,7 +721,7 @@ export default function StopDetailPage({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingReceipt}
-              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-text-muted transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-60"
+              className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-border text-text-muted transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-60"
             >
               {uploadingReceipt ? (
                 <Loader2 size={20} className="animate-spin" />
@@ -729,26 +733,27 @@ export default function StopDetailPage({
               </span>
             </button>
           </div>
-        </Card>
+        </Collapsible>
 
-        {/* Notes */}
-        <Card className="!rounded-2xl">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-              <FileSpreadsheet size={16} />
-            </span>
-            <CardTitle>Notas</CardTitle>
-          </div>
+        <Collapsible
+          title="Notas"
+          summary={notes ? notes.slice(0, 60) : 'Opcional'}
+          icon={
+            <IconChip tone="neutral">
+              <StickyNote size={16} />
+            </IconChip>
+          }
+        >
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Calidad del clearance, competencia, secciones que valen la pena..."
-            className="mt-3 w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             rows={3}
           />
-        </Card>
+        </Collapsible>
 
-        {/* Desktop save button (mobile uses the sticky bar below) */}
+        {/* Desktop save */}
         <div className="hidden md:block">
           <Button fullWidth size="lg" onClick={saveAndComplete} loading={saving} className="gap-2">
             <Save size={18} />
@@ -757,14 +762,20 @@ export default function StopDetailPage({
         </div>
       </div>
 
-      {/* Sticky save bar — mobile, sits above the bottom nav */}
-      <div className="fixed inset-x-0 bottom-16 z-40 border-t border-border bg-surface/95 p-3 backdrop-blur-md safe-bottom md:hidden">
+      {/* Sticky save bar — mobile, above the bottom nav */}
+      <div className="fixed inset-x-0 bottom-[56px] z-40 border-t border-border bg-surface/95 p-3 backdrop-blur-md safe-bottom md:hidden">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-text-muted">Utilidad proyectada</p>
-            <p className={`text-lg font-extrabold leading-tight ${projectedProfit >= 0 ? 'text-emerald-600' : 'text-danger'}`}>
+            <p className="text-[11px] text-text-muted">
+              Utilidad{ratingLabel ? ` · ${ratingLabel}` : ''}
+            </p>
+            <p
+              className={`text-lg font-bold leading-tight tabular ${projectedProfit >= 0 ? 'text-success' : 'text-danger'}`}
+            >
               ${projectedProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-              {liveROI !== 0 && <span className="ml-1 text-xs font-semibold text-text-muted">{liveROI}%</span>}
+              {liveROI !== 0 && (
+                <span className="ml-1 text-xs font-semibold text-text-muted">{liveROI}%</span>
+              )}
             </p>
           </div>
           <Button size="lg" onClick={saveAndComplete} loading={saving} className="shrink-0 gap-2">

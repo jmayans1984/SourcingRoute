@@ -4,13 +4,15 @@ import { Wifi, WifiOff } from 'lucide-react';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'muted';
 
+// Tinted with the semantic token at low opacity so badges read correctly in
+// both light and dark themes without a second palette.
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-gray-100 text-gray-700',
-  success: 'bg-green-100 text-green-700',
-  warning: 'bg-amber-100 text-amber-700',
-  danger: 'bg-red-100 text-red-700',
-  info: 'bg-blue-100 text-blue-700',
-  muted: 'bg-gray-100 text-gray-500',
+  default: 'bg-surface-secondary text-text-secondary',
+  success: 'bg-success/12 text-success',
+  warning: 'bg-warning/12 text-warning',
+  danger: 'bg-danger/12 text-danger',
+  info: 'bg-info/12 text-info',
+  muted: 'bg-surface-secondary text-text-muted',
 };
 
 export function Badge({

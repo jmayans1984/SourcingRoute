@@ -214,7 +214,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
               <button
                 type="button"
                 onClick={() => removeStop(stop.place_id)}
-                className="shrink-0 rounded-lg p-1.5 text-text-muted transition-colors hover:bg-red-50 hover:text-danger"
+                className="shrink-0 rounded-lg p-1.5 text-text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                 title="Remove stop"
               >
                 <Trash2 size={16} />

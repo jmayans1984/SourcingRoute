@@ -13,19 +13,20 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary:
-    'bg-brand-gradient text-white shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/30 hover:brightness-105 active:brightness-95',
-  secondary:
-    'bg-secondary text-white shadow-md shadow-emerald-500/25 hover:bg-secondary-dark active:bg-secondary-dark',
-  outline: 'border border-border bg-surface text-text hover:bg-surface-secondary',
-  ghost: 'text-text-secondary hover:bg-surface-secondary',
-  danger: 'bg-danger text-white shadow-md shadow-red-500/25 hover:bg-red-700 active:bg-red-800',
+  primary: 'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark shadow-soft',
+  secondary: 'bg-success text-white hover:opacity-90 active:opacity-100 shadow-soft',
+  outline:
+    'border border-border bg-surface text-text hover:bg-surface-secondary hover:border-border-strong',
+  ghost: 'text-text-secondary hover:bg-surface-secondary hover:text-text',
+  danger: 'bg-danger text-white hover:opacity-90 active:opacity-100 shadow-soft',
 };
 
+// Comfortable touch targets: 44px is the minimum recommended tap size, so md
+// and lg both clear it on phones.
 const sizeStyles: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2.5 text-sm',
-  lg: 'px-6 py-3 text-base',
+  sm: 'h-9 px-3.5 text-sm',
+  md: 'h-11 px-4 text-sm',
+  lg: 'h-12 px-6 text-base',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

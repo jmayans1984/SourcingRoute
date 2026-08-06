@@ -317,7 +317,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
       <div className="grid gap-6 md:grid-cols-[1fr_1.3fr]">
         {/* Left column: trip details */}
         <div className="space-y-4">
-          <Card className="!rounded-2xl">
+          <Card>
             <CardTitle>Info de la Ruta</CardTitle>
             <div className="mt-3 space-y-3">
               <Input
@@ -335,7 +335,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
             </div>
           </Card>
 
-          <Card className="!rounded-2xl">
+          <Card>
             <CardTitle>Ubicación</CardTitle>
             <div className="mt-3 space-y-3">
               <LocationInput
@@ -367,7 +367,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
             </div>
           </Card>
 
-          <Card className="!rounded-2xl">
+          <Card>
             <CardTitle>Ajustes</CardTitle>
             <div className="mt-3 space-y-3">
               <Input
@@ -398,7 +398,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
 
         {/* Right column: stops list + add store */}
         <div className="space-y-4">
-          <Card className="!rounded-2xl">
+          <Card>
             <CardTitle>Agregar una Tienda</CardTitle>
             <div className="mt-3 flex gap-2">
               <Input
@@ -439,7 +439,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
             )}
           </Card>
 
-          <Card className="!rounded-2xl">
+          <Card>
             <div className="flex items-center justify-between gap-2">
               <CardTitle>Paradas ({stops.length})</CardTitle>
               <Button
@@ -499,7 +499,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
                       </button>
                       <button
                         onClick={() => removeStop(index)}
-                        className="rounded-lg p-1.5 text-text-muted hover:bg-red-50 hover:text-danger"
+                        className="rounded-lg p-1.5 text-text-muted hover:bg-danger/10 hover:text-danger"
                       >
                         <Trash2 size={16} />
                       </button>

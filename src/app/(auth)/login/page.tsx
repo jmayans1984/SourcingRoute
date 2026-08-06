@@ -40,18 +40,16 @@ export default function LoginPage() {
     <div className="flex min-h-full flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-gradient text-white shadow-lg shadow-indigo-500/30">
-            <Route size={30} />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-soft">
+            <Route size={26} />
           </div>
-          <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-brand-gradient">
-            SourcingRoute
-          </h1>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight">SourcingRoute</h1>
           <p className="mt-1.5 text-sm text-text-secondary">
             Ingresa para planear tu día de sourcing
           </p>
         </div>
 
-        <div className="mt-8 rounded-3xl border border-border bg-surface p-6 shadow-xl shadow-indigo-500/5">
+        <div className="mt-7 rounded-2xl border border-border bg-surface p-6 shadow-soft">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Correo"
@@ -73,7 +71,7 @@ export default function LoginPage() {
             />
 
             {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-danger">{error}</p>
+              <p className="rounded-xl bg-danger/10 px-3 py-2.5 text-sm text-danger">{error}</p>
             )}
 
             <Button type="submit" fullWidth size="lg" loading={loading}>

@@ -1,75 +1,182 @@
 @import "tailwindcss";
 
-@theme {
-  --color-primary: #4f46e5;
-  --color-primary-dark: #4338ca;
-  --color-primary-light: #6366f1;
-  --color-secondary: #059669;
-  --color-secondary-dark: #047857;
-  --color-accent: #f59e0b;
-  --color-danger: #dc2626;
-  --color-surface: #ffffff;
-  --color-surface-secondary: #f1f5f9;
-  --color-border: #e2e8f0;
-  --color-text: #0f172a;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #94a3b8;
+/* Dark mode is driven by data-theme on <html>, set before paint by an inline
+   script in the root layout (so there's no flash of the wrong theme). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-  --color-score-great: #16a34a;
-  --color-score-good: #65a30d;
-  --color-score-ok: #ca8a04;
-  --color-score-bad: #dc2626;
+/* ---------------------------------------------------------------------------
+   Semantic color tokens. Everything in the app references these (never raw
+   hex), so a single definition here flips the whole UI between light and dark.
+   --------------------------------------------------------------------------- */
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-secondary: #f3f4f7;
+  --surface-hover: #eef0f4;
+  --border: #e7e9ee;
+  --border-strong: #d6dae2;
 
-  --color-status-pending: #94a3b8;
-  --color-status-on-the-way: #3b82f6;
-  --color-status-arrived: #f59e0b;
-  --color-status-completed: #16a34a;
-  --color-status-skipped: #6b7280;
+  --text: #16181d;
+  --text-secondary: #5c6472;
+  --text-muted: #8b93a1;
 
-  /* Brand gradient reused across hero surfaces and primary actions */
-  --gradient-brand: linear-gradient(135deg, #4f46e5 0%, #6d28d9 50%, #7c3aed 100%);
+  --primary: #5b61d6;
+  --primary-dark: #4a50c4;
+  --primary-light: #7a80e6;
+
+  --success: #0f9d63;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #2563eb;
+
+  --shadow-color: 220 18% 60%;
+}
+
+[data-theme="dark"] {
+  --bg: #0e1014;
+  --surface: #171a20;
+  --surface-secondary: #1e222a;
+  --surface-hover: #252a33;
+  --border: #272c35;
+  --border-strong: #363c47;
+
+  --text: #e9ebef;
+  --text-secondary: #9aa2b1;
+  --text-muted: #6d7583;
+
+  --primary: #838aff;
+  --primary-dark: #6f77f5;
+  --primary-light: #9ba1ff;
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --info: #60a5fa;
+
+  --shadow-color: 220 40% 2%;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  /* Legacy aliases kept so existing markup keeps working */
+  --color-secondary: var(--success);
+  --color-secondary-dark: var(--success);
+  --color-accent: var(--warning);
+
+  --color-score-great: var(--success);
+  --color-score-good: var(--success);
+  --color-score-ok: var(--warning);
+  --color-score-bad: var(--danger);
 }
 
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    color-scheme: light;
+  }
+
+  /* Elements with a CSS transition on a var-driven color keep the stale color
+     when data-theme flips (Chromium). Transitions are suppressed for one frame
+     while switching so every surface repaints with the new palette at once. */
+  html.theme-switching *,
+  html.theme-switching *::before,
+  html.theme-switching *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
   }
 
   body {
-    @apply text-text antialiased;
-    /* Soft, premium page backdrop instead of a flat gray */
-    background-color: #f6f7fb;
-    background-image:
-      radial-gradient(1100px 500px at 100% -5%, rgba(99, 102, 241, 0.10), transparent 60%),
-      radial-gradient(900px 500px at -10% 0%, rgba(139, 92, 246, 0.08), transparent 55%);
-    background-attachment: fixed;
-    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Calmer, tighter headings */
+  h1, h2, h3 {
+    letter-spacing: -0.015em;
   }
 
   input, select, textarea {
     @apply text-base;
   }
+
+  /* Numbers line up in tables and KPI rows */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @layer utilities {
-  .bg-brand-gradient {
-    background-image: var(--gradient-brand);
-  }
-  .text-brand-gradient {
-    background-image: var(--gradient-brand);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  /* Hide scrollbars on horizontal filter rows while keeping scroll */
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Soft elevation — barely there, just enough to lift a card off the page */
+  .shadow-soft {
+    box-shadow:
+      0 1px 2px hsl(var(--shadow-color) / 0.06),
+      0 2px 8px hsl(var(--shadow-color) / 0.05);
+  }
+  .shadow-soft-lg {
+    box-shadow:
+      0 2px 4px hsl(var(--shadow-color) / 0.06),
+      0 8px 24px hsl(var(--shadow-color) / 0.08);
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

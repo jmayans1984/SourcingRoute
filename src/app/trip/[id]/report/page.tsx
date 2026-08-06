@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { Header } from '@/components/layout/header';
 import { AppShell } from '@/components/layout/app-shell';
-import { Card, CardTitle } from '@/components/ui/card';
+import { Card, CardTitle, IconChip } from '@/components/ui/card';
 import { RatingBadge } from '@/components/ui/badge';
 import type { SourcingTrip, TripStop, Store } from '@/types/database';
 import {
@@ -147,62 +147,59 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
       <Header title="Reporte de la Ruta" showBack />
 
       <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
-        {/* Hero */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-center text-white shadow-xl shadow-emerald-500/25">
-          <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
-              <Trophy size={26} className="text-amber-300" />
-            </div>
-            <h2 className="mt-3 text-2xl font-extrabold">¡Día de sourcing completado!</h2>
-            <p className="mt-1 text-sm text-emerald-100">
-              {new Date(trip.trip_date).toLocaleDateString('es-CO', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </p>
+        {/* Completion banner */}
+        <Card className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-success/10">
+            <Trophy size={24} className="text-success" />
           </div>
-        </div>
+          <h2 className="mt-3 text-xl font-bold tracking-tight">¡Día de sourcing completado!</h2>
+          <p className="mt-1 text-sm text-text-muted">
+            {new Date(trip.trip_date).toLocaleDateString('es-CO', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+        </Card>
 
         {/* Key metrics */}
         <div className="grid grid-cols-3 gap-3">
-          <Card className="!rounded-2xl text-center">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20">
-              <MapPin size={18} />
-            </div>
-            <p className="mt-1.5 text-2xl font-extrabold">{visitedStops.length}</p>
-            <p className="text-xs text-text-muted">Tiendas</p>
+          <Card className="text-center">
+            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <MapPin size={17} />
+            </span>
+            <p className="mt-2 text-2xl font-bold tabular">{visitedStops.length}</p>
+            <p className="text-[11px] text-text-muted">Tiendas</p>
           </Card>
-          <Card className="!rounded-2xl text-center">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20">
-              <Package size={18} />
-            </div>
-            <p className="mt-1.5 text-2xl font-extrabold">{totalItemsBought}</p>
-            <p className="text-xs text-text-muted">Artículos</p>
+          <Card className="text-center">
+            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
+              <Package size={17} />
+            </span>
+            <p className="mt-2 text-2xl font-bold tabular">{totalItemsBought}</p>
+            <p className="text-[11px] text-text-muted">Artículos</p>
           </Card>
-          <Card className="!rounded-2xl text-center">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/20">
-              <DollarSign size={18} />
-            </div>
-            <p className="mt-1.5 text-2xl font-extrabold">${totalSpent.toFixed(0)}</p>
-            <p className="text-xs text-text-muted">Gastado</p>
+          <Card className="text-center">
+            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-warning/10 text-warning">
+              <DollarSign size={17} />
+            </span>
+            <p className="mt-2 text-2xl font-bold tabular">${totalSpent.toFixed(0)}</p>
+            <p className="text-[11px] text-text-muted">Gastado</p>
           </Card>
         </div>
 
         {/* P&L: product profit − route expenses = real profit */}
-        <Card className="!rounded-2xl">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+        <Card>
+          <div className="mb-3 flex items-center gap-2">
+            <IconChip tone="success">
               <TrendingUp size={16} />
-            </span>
+            </IconChip>
             <CardTitle>Resultado de la Ruta</CardTitle>
           </div>
 
           <div className="space-y-1.5 text-sm">
             <div className="flex justify-between text-text-secondary">
               <span>Utilidad proyectada (productos)</span>
-              <span className="font-medium">
+              <span className="font-medium tabular">
                 ${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -210,10 +207,10 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
             {Object.entries(expensesByCategory).map(([name, amount]) => (
               <div key={name} className="flex justify-between text-text-secondary">
                 <span className="flex items-center gap-1.5">
-                  <Wallet size={12} className="text-amber-600" />
+                  <Wallet size={12} className="text-warning" />
                   {name}
                 </span>
-                <span className="text-danger">
+                <span className="text-danger tabular">
                   −${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -222,16 +219,18 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
             {totalExpenses > 0 && (
               <div className="flex justify-between border-t border-border pt-1.5 text-text-secondary">
                 <span>Total gastos de ruta</span>
-                <span className="font-medium text-danger">
+                <span className="font-medium text-danger tabular">
                   −${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             )}
 
-            <div className="flex items-center justify-between rounded-xl bg-surface-secondary px-3 py-2.5 mt-2">
-              <span className="font-bold">Utilidad Real</span>
+            <div className="mt-2 flex items-center justify-between rounded-xl bg-surface-secondary px-3 py-2.5">
+              <span className="font-semibold">Utilidad Real</span>
               <div className="text-right">
-                <p className={`text-lg font-bold leading-tight ${realProfit >= 0 ? 'text-green-600' : 'text-danger'}`}>
+                <p
+                  className={`text-lg font-bold leading-tight tabular ${realProfit >= 0 ? 'text-success' : 'text-danger'}`}
+                >
                   ${realProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
                 {roiPercent !== 0 && (
@@ -244,11 +243,11 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
 
         {/* Top spending store */}
         {topSpendStore && (
-          <Card className="!rounded-2xl">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+          <Card>
+            <div className="mb-2 flex items-center gap-2">
+              <IconChip tone="warning">
                 <Trophy size={16} />
-              </span>
+              </IconChip>
               <CardTitle>Mayor Gasto</CardTitle>
             </div>
             <p className="font-medium">{topSpendStore.store.name}</p>
@@ -261,12 +260,12 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
 
         {/* Products table */}
         {products.length > 0 && (
-          <Card className="!rounded-2xl">
+          <Card>
             <CardTitle>Productos Comprados</CardTitle>
-            <div className="mt-3 overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-xs min-w-[500px]">
+            <div className="mt-3 -mx-4 overflow-x-auto px-4">
+              <table className="w-full min-w-[500px] text-xs tabular">
                 <thead>
-                  <tr className="border-b border-border text-text-muted">
+                  <tr className="border-b border-border text-text-secondary">
                     <th className="pb-2 text-left font-medium">Producto</th>
                     <th className="pb-2 text-right font-medium">Qty</th>
                     <th className="pb-2 text-right font-medium">COGS</th>
@@ -277,9 +276,9 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
                 <tbody className="divide-y divide-border">
                   {products.map((p) => (
                     <tr key={p.code} className="text-text">
-                      <td className="py-2 pr-3 max-w-[160px]">
+                      <td className="max-w-[160px] py-2 pr-3">
                         <p className="truncate font-medium">{p.product_name}</p>
-                        {p.code && <p className="text-text-muted truncate text-[10px]">{p.code}</p>}
+                        {p.code && <p className="truncate text-[10px] text-text-muted">{p.code}</p>}
                       </td>
                       <td className="py-2 text-right font-semibold">{p.quantity}</td>
                       <td className="py-2 text-right">
@@ -290,14 +289,14 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
                       </td>
                       <td
                         className={`py-2 text-right font-medium ${
-                          p.totalProfit >= 0 ? 'text-green-600' : 'text-danger'
+                          p.totalProfit >= 0 ? 'text-success' : 'text-danger'
                         }`}
                       >
                         ${p.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}
-                  <tr className="border-t-2 border-border font-bold text-text">
+                  <tr className="border-t-2 border-border font-semibold text-text">
                     <td className="py-2 pr-3">Total</td>
                     <td className="py-2 text-right">
                       {products.reduce((s, p) => s + p.quantity, 0)}
@@ -314,7 +313,7 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
                         .reduce((s, p) => s + p.totalSales, 0)
                         .toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-2 text-right text-green-600">
+                    <td className="py-2 text-right text-success">
                       $
                       {products
                         .reduce((s, p) => s + p.totalProfit, 0)
@@ -328,7 +327,7 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
         )}
 
         {/* All stops detail */}
-        <Card className="!rounded-2xl">
+        <Card>
           <CardTitle>Todas las Paradas</CardTitle>
           <div className="mt-2 space-y-3">
             {stops.map((stop) => (
@@ -353,10 +352,12 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
                 </div>
                 {stop.status === 'completed' && (
                   <div className="text-right">
-                    <p className="text-sm font-medium text-secondary">
+                    <p className="text-sm font-semibold text-success tabular">
                       ${(stop.total_spent || 0).toFixed(0)}
                     </p>
-                    <p className="text-xs text-text-muted">{stop.total_items_bought || 0} artículos</p>
+                    <p className="text-xs text-text-muted tabular">
+                      {stop.total_items_bought || 0} artículos
+                    </p>
                   </div>
                 )}
               </div>

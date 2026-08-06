@@ -136,9 +136,9 @@ export default function CreateRoutePage() {
         <div className="gap-4 space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:space-y-0">
           {/* Left column: the form */}
           <div className="space-y-4">
-            <Card className="!rounded-2xl">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
-                <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+            <Card>
+              <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-text">
+                <span className="h-3.5 w-1 rounded-full bg-primary" />
                 Detalles de la Ruta
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -157,9 +157,9 @@ export default function CreateRoutePage() {
               </div>
             </Card>
 
-            <Card className="!rounded-2xl">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
-                <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+            <Card>
+              <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-text">
+                <span className="h-3.5 w-1 rounded-full bg-primary" />
                 Inicio y Fin
               </h3>
               <div className="space-y-3">
@@ -188,10 +188,10 @@ export default function CreateRoutePage() {
                         key={opt.value}
                         type="button"
                         onClick={() => setEndMode(opt.value)}
-                        className={`rounded-xl border p-2.5 text-center transition-colors ${
+                        className={`min-h-[60px] rounded-xl border p-2.5 text-center transition-colors ${
                           endMode === opt.value
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-border text-text-secondary hover:border-primary/30'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-text-secondary hover:border-primary/40'
                         }`}
                       >
                         <p className="text-xs font-semibold leading-tight">{opt.label}</p>
@@ -222,9 +222,9 @@ export default function CreateRoutePage() {
               </div>
             </Card>
 
-            <Card className="!rounded-2xl">
-              <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
-                <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+            <Card>
+              <h3 className="mb-1 flex items-center gap-2 text-base font-semibold text-text">
+                <span className="h-3.5 w-1 rounded-full bg-primary" />
                 Tiendas a Visitar
               </h3>
               <p className="mb-3 text-xs text-text-muted">
@@ -234,7 +234,7 @@ export default function CreateRoutePage() {
             </Card>
 
             {error && (
-              <div className="rounded-xl border border-danger/30 bg-red-50 p-3 text-sm text-danger">
+              <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
                 {error}
               </div>
             )}
@@ -266,39 +266,39 @@ export default function CreateRoutePage() {
             />
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Card className="!rounded-2xl text-center">
-                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20">
+              <Card className="text-center">
+                <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <MapPin size={16} />
-                </div>
-                <p className="mt-1.5 text-lg font-extrabold">
+                </span>
+                <p className="mt-2 text-lg font-bold tabular">
                   {routeStats ? formatDistance(routeStats.distanceMiles) : '--'}
                 </p>
-                <p className="text-xs text-text-muted">Distancia</p>
+                <p className="text-[11px] text-text-muted">Distancia</p>
               </Card>
-              <Card className="!rounded-2xl text-center">
-                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20">
+              <Card className="text-center">
+                <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-success/10 text-success">
                   <Clock size={16} />
-                </div>
-                <p className="mt-1.5 text-lg font-extrabold">
+                </span>
+                <p className="mt-2 text-lg font-bold tabular">
                   {routeStats ? formatDuration(routeStats.driveMinutes + timeInStoresMinutes) : '--'}
                 </p>
-                <p className="text-xs text-text-muted">Tiempo Total</p>
+                <p className="text-[11px] text-text-muted">Tiempo Total</p>
               </Card>
-              <Card className="!rounded-2xl text-center">
-                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/20">
+              <Card className="text-center">
+                <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-warning/10 text-warning">
                   <Timer size={16} />
-                </div>
-                <p className="mt-1.5 text-lg font-extrabold">
+                </span>
+                <p className="mt-2 text-lg font-bold tabular">
                   {stops.length > 0 ? formatDuration(timeInStoresMinutes) : '--'}
                 </p>
-                <p className="text-xs text-text-muted">En Tiendas</p>
+                <p className="text-[11px] text-text-muted">En Tiendas</p>
               </Card>
-              <Card className="!rounded-2xl text-center">
-                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20">
+              <Card className="text-center">
+                <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
                   <Store size={16} />
-                </div>
-                <p className="mt-1.5 text-lg font-extrabold">{stops.length}</p>
-                <p className="text-xs text-text-muted">Paradas</p>
+                </span>
+                <p className="mt-2 text-lg font-bold tabular">{stops.length}</p>
+                <p className="text-[11px] text-text-muted">Paradas</p>
               </Card>
             </div>
           </div>

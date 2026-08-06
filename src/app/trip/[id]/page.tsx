@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { Header } from '@/components/layout/header';
 import { AppShell } from '@/components/layout/app-shell';
-import { Card } from '@/components/ui/card';
+import { Card, CardTitle, IconChip, SectionTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StopStatusBadge, ScoreBadge } from '@/components/ui/badge';
+import { StopStatusBadge, ScoreBadge, TripStatusBadge } from '@/components/ui/badge';
 import { TripRouteMap } from '@/components/maps/trip-route-map';
+import { toast } from '@/components/ui/toast';
 import { buildWazeUrl, buildGoogleMapsStopUrl } from '@/utils/navigation';
 import { formatDuration } from '@/utils/geo';
 import { calculateStoreScore } from '@/utils/scoring';
@@ -192,9 +193,13 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       const data = await response.json();
       // Hide stores that are already in the route
       const existingIds = new Set(stops.map((s) => s.store_id));
-      setSearchResults(
-        (data.results || []).filter((r: FindResult) => !r.id || !existingIds.has(r.id))
+      const results = (data.results || []).filter(
+        (r: FindResult) => !r.id || !existingIds.has(r.id)
       );
+      setSearchResults(results);
+      if (results.length === 0) toast.info('No se encontraron tiendas con ese nombre');
+    } catch {
+      toast.error('No se pudo buscar. Revisa tu conexión.');
     } finally {
       setSearching(false);
     }
@@ -210,7 +215,10 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
         body: JSON.stringify(result),
       });
       const upsertData = await upsertRes.json();
-      if (!upsertData.store_id) return;
+      if (!upsertData.store_id) {
+        toast.error('No se pudo guardar la tienda');
+        return;
+      }
 
       // 2) Append it to this trip (works while planning or active)
       const addRes = await fetch('/api/route/add-stop', {
@@ -221,13 +229,14 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       const addData = await addRes.json();
 
       if (!addRes.ok) {
-        alert(addData.error || 'No se pudo agregar la tienda');
+        toast.error(addData.error || 'No se pudo agregar la tienda');
         return;
       }
 
       if (addData.stop) {
         setStops((prev) => [...prev, addData.stop as StopWithStore]);
         setSearchResults((prev) => prev.filter((r) => r.google_place_id !== result.google_place_id));
+        toast.success(`${result.name} agregada a la ruta`);
         // Refresh trip totals shown in the logistics strip
         const supabase = createClient();
         const { data: updatedTrip } = await supabase
@@ -237,6 +246,8 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
           .single();
         if (updatedTrip) setTrip(updatedTrip);
       }
+    } catch {
+      toast.error('No se pudo agregar la tienda');
     } finally {
       setAddingStoreId(null);
     }
@@ -270,6 +281,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
     if (data) {
       setExpenses((prev) => [...prev, data]);
       setExpAmount('');
+      toast.success(`Gasto de ${category.name} agregado`);
     }
     setAddingExpense(false);
   }
@@ -278,6 +290,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
     const supabase = createClient();
     await supabase.from('trip_expenses').delete().eq('id', expenseId);
     setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
+    toast.info('Gasto eliminado');
   }
 
   async function openProducts() {
@@ -349,6 +362,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       .update({ status: 'active' })
       .eq('id', id);
     setTrip((prev) => (prev ? { ...prev, status: 'active' } : prev));
+    toast.success('¡Ruta iniciada! Buen sourcing.');
   }
 
   function moveStop(index: number, direction: -1 | 1) {
@@ -394,6 +408,9 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       if (response.ok) {
         setOrderChanged(false);
         await loadTrip();
+        toast.success('Nuevo orden guardado');
+      } else {
+        toast.error('No se pudo guardar el orden');
       }
     } finally {
       setSavingOrder(false);
@@ -433,8 +450,12 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
 
         if (updatedTrip) setTrip(updatedTrip);
 
+        const removed = pendingRemovalIds.size;
         setStops((prev) => prev.filter((s) => !pendingRemovalIds.has(s.id)));
         setPendingRemovalIds(new Set());
+        toast.success(`${removed} tienda${removed > 1 ? 's' : ''} quitada${removed > 1 ? 's' : ''}`);
+      } else {
+        toast.error('No se pudieron quitar las tiendas');
       }
     } finally {
       setUpdatingRoute(false);
@@ -479,19 +500,15 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
   const roiPercent = totalSpent > 0 ? Math.round((realProfit / totalSpent) * 100) : 0;
   const progressPct = stops.length > 0 ? Math.round((completedStops / stops.length) * 100) : 0;
 
-  const statusLabel =
-    trip.status === 'planning'
-      ? 'Planeando'
-      : trip.status === 'active'
-        ? 'En ruta'
-        : trip.status === 'completed'
-          ? 'Completada'
-          : 'Cancelada';
-
   return (
     <AppShell>
       <Header
         title={trip.name || trip.selected_chains?.slice(0, 2).join(', ') || 'Ruta'}
+        subtitle={new Date(trip.trip_date).toLocaleDateString('es-CO', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        })}
         showBack
         action={
           allDone ? (
@@ -505,108 +522,90 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       />
 
       <div className="space-y-4 p-4 md:p-0">
-        {/* Hero: progress + status */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-5 text-white shadow-xl shadow-indigo-500/25">
-          <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-16 right-20 h-52 w-52 rounded-full bg-fuchsia-400/20 blur-3xl" />
-
-          <div className="relative flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold backdrop-blur-sm">
-                {statusLabel}
+        {/* Progress */}
+        <Card>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <TripStatusBadge status={trip.status} />
+              <span className="text-sm font-semibold tabular">
+                {completedStops}/{stops.length} tiendas
               </span>
-              <p className="mt-2 text-sm text-indigo-100">
-                {new Date(trip.trip_date).toLocaleDateString('es-CO', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                })}
-              </p>
-              <p className="mt-1 text-lg font-extrabold leading-tight">
-                {completedStops}/{stops.length} tiendas completadas
-              </p>
             </div>
-            <button
-              onClick={openProducts}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/25"
-            >
-              <ShoppingBag size={14} />
+            <Button size="sm" variant="outline" onClick={openProducts} className="gap-1.5">
+              <ShoppingBag size={15} />
               Productos
-            </button>
+            </Button>
           </div>
-
-          <div className="relative mt-4 h-2.5 w-full overflow-hidden rounded-full bg-white/20">
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-secondary">
             <div
-              className={`h-full rounded-full transition-all ${allDone ? 'bg-emerald-300' : 'bg-white'}`}
+              className={`h-full rounded-full ${allDone ? 'bg-success' : 'bg-primary'}`}
               style={{ width: `${progressPct}%` }}
             />
           </div>
-        </div>
+        </Card>
 
-        {/* Money KPIs — the ones that matter while sourcing */}
-        <div className="grid grid-cols-3 gap-2 md:gap-3">
-          <Card className="!rounded-2xl !p-3 text-center">
-            <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20">
-              <Package size={16} />
-            </div>
-            <p className="mt-1.5 text-lg font-extrabold leading-tight">{totalItemsBought}</p>
+        {/* Money KPIs */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="text-center">
+            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
+              <Package size={17} />
+            </span>
+            <p className="mt-2 text-lg font-bold tabular">{totalItemsBought}</p>
             <p className="text-[11px] text-text-muted">Artículos</p>
           </Card>
-          <Card className="!rounded-2xl !p-3 text-center">
-            <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/20">
-              <DollarSign size={16} />
-            </div>
-            <p className="mt-1.5 text-lg font-extrabold leading-tight">
+          <Card className="text-center">
+            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-warning/10 text-warning">
+              <DollarSign size={17} />
+            </span>
+            <p className="mt-2 text-lg font-bold tabular">
               ${totalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
             <p className="text-[11px] text-text-muted">Gastado</p>
           </Card>
-          <Card className="!rounded-2xl !p-3 text-center">
-            <div
-              className={`mx-auto flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-md ${
-                realProfit >= 0
-                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20'
-                  : 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/20'
+          <Card className="text-center">
+            <span
+              className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg ${
+                realProfit >= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
               }`}
             >
-              <TrendingUp size={16} />
-            </div>
+              <TrendingUp size={17} />
+            </span>
             <p
-              className={`mt-1.5 text-lg font-extrabold leading-tight ${realProfit >= 0 ? 'text-emerald-600' : 'text-danger'}`}
+              className={`mt-2 text-lg font-bold tabular ${realProfit >= 0 ? 'text-success' : 'text-danger'}`}
             >
               ${realProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
             <p className="text-[11px] text-text-muted">
-              Utilidad Real{roiPercent !== 0 ? ` · ${roiPercent}%` : ''}
+              Utilidad{roiPercent !== 0 ? ` · ${roiPercent}%` : ''}
             </p>
           </Card>
         </div>
 
-        {/* Time / logistics strip */}
-        <Card className="!rounded-2xl !p-3">
+        {/* Logistics strip */}
+        <Card className="!p-3">
           <div className="grid grid-cols-4 divide-x divide-border text-center">
             <div className="px-1">
-              <StoreIcon size={13} className="mx-auto text-indigo-500" />
-              <p className="mt-1 text-sm font-bold leading-tight">{stops.length}</p>
+              <StoreIcon size={14} className="mx-auto text-text-muted" />
+              <p className="mt-1 text-sm font-semibold tabular">{stops.length}</p>
               <p className="text-[10px] text-text-muted">Tiendas</p>
             </div>
             <div className="px-1">
-              <Clock size={13} className="mx-auto text-indigo-500" />
-              <p className="mt-1 text-sm font-bold leading-tight">
+              <Clock size={14} className="mx-auto text-text-muted" />
+              <p className="mt-1 text-sm font-semibold tabular">
                 {trip.total_store_minutes ? formatDuration(trip.total_store_minutes) : '--'}
               </p>
               <p className="text-[10px] text-text-muted">En tiendas</p>
             </div>
             <div className="px-1">
-              <Car size={13} className="mx-auto text-indigo-500" />
-              <p className="mt-1 text-sm font-bold leading-tight">
+              <Car size={14} className="mx-auto text-text-muted" />
+              <p className="mt-1 text-sm font-semibold tabular">
                 {trip.total_drive_minutes ? formatDuration(trip.total_drive_minutes) : '--'}
               </p>
               <p className="text-[10px] text-text-muted">Manejando</p>
             </div>
             <div className="px-1">
-              <Clock size={13} className="mx-auto text-indigo-500" />
-              <p className="mt-1 text-sm font-bold leading-tight">
+              <Clock size={14} className="mx-auto text-text-muted" />
+              <p className="mt-1 text-sm font-semibold tabular">
                 {trip.total_drive_minutes && trip.total_store_minutes
                   ? formatDuration(trip.total_drive_minutes + trip.total_store_minutes)
                   : '--'}
@@ -616,17 +615,17 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
           </div>
         </Card>
 
-        {/* Route expenses — subtracted from product profit for real profit */}
-        <Card className="!rounded-2xl">
+        {/* Route expenses */}
+        <Card>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+              <IconChip tone="warning">
                 <Wallet size={16} />
-              </span>
-              <p className="text-sm font-bold">Gastos de Ruta</p>
+              </IconChip>
+              <CardTitle>Gastos de Ruta</CardTitle>
             </div>
             {totalExpenses > 0 && (
-              <span className="text-sm font-bold text-danger">
+              <span className="text-sm font-semibold text-danger tabular">
                 −${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             )}
@@ -637,18 +636,19 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
               {expenses.map((exp) => (
                 <div
                   key={exp.id}
-                  className="flex items-center justify-between rounded-lg bg-surface-secondary px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded-xl bg-surface-secondary px-3 py-2 text-sm"
                 >
                   <span className="font-medium">{exp.category_name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-danger">
+                  <div className="flex items-center gap-1">
+                    <span className="text-danger tabular">
                       −${exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                     <button
                       onClick={() => deleteExpense(exp.id)}
-                      className="text-text-muted hover:text-danger"
+                      aria-label="Eliminar gasto"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
@@ -657,7 +657,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
           )}
 
           {expCategories.length === 0 ? (
-            <p className="mt-3 text-xs text-text-muted">
+            <p className="mt-3 text-sm text-text-muted">
               No tienes cuentas contables.{' '}
               <Link href="/profile" className="font-medium text-primary hover:underline">
                 Créalas en tu perfil
@@ -669,7 +669,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
               <select
                 value={expCategoryId}
                 onChange={(e) => setExpCategoryId(e.target.value)}
-                className="h-11 flex-1 rounded-xl border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="h-11 flex-1 rounded-xl border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               >
                 {expCategories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -677,43 +677,44 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
                   </option>
                 ))}
               </select>
-              <Input
+              <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={expAmount}
                 onChange={(e) => setExpAmount(e.target.value)}
                 placeholder="$0.00"
-                className="!w-24 shrink-0"
+                className="h-11 w-24 shrink-0 rounded-xl border border-border bg-surface px-3 text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               />
               <Button
-                size="sm"
-                variant="outline"
                 onClick={addExpense}
                 loading={addingExpense}
                 disabled={!expAmount || parseFloat(expAmount) <= 0}
-                className="h-11 shrink-0 gap-1"
+                className="shrink-0 !px-3.5"
+                aria-label="Agregar gasto"
               >
-                <Plus size={15} />
+                <Plus size={17} />
               </Button>
             </div>
           )}
 
           {(totalExpenses > 0 || totalProfit > 0) && (
-            <div className="mt-3 space-y-1 rounded-xl border border-border p-3 text-sm">
+            <div className="mt-3 space-y-1.5 rounded-xl border border-border p-3 text-sm">
               <div className="flex justify-between text-text-secondary">
                 <span>Utilidad productos</span>
-                <span>${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span className="tabular">
+                  ${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="flex justify-between text-text-secondary">
                 <span>Gastos de ruta</span>
-                <span className="text-danger">
+                <span className="text-danger tabular">
                   −${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex justify-between border-t border-border pt-1 font-bold">
+              <div className="flex justify-between border-t border-border pt-1.5 font-semibold">
                 <span>Utilidad Real</span>
-                <span className={realProfit >= 0 ? 'text-emerald-600' : 'text-danger'}>
+                <span className={`tabular ${realProfit >= 0 ? 'text-success' : 'text-danger'}`}>
                   ${realProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -721,9 +722,9 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
           )}
         </Card>
 
-        {/* Route map - full width */}
+        {/* Route map */}
         {stops.length > 0 && (
-          <Card padding={false} className="!rounded-2xl overflow-hidden">
+          <Card padding={false} className="overflow-hidden">
             <TripRouteMap
               startLat={trip.start_lat}
               startLng={trip.start_lng}
@@ -745,33 +746,24 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
           )}
 
           {pendingRemovalIds.size > 0 && (
-            <Button
-              variant="secondary"
-              onClick={updateRoute}
-              loading={updatingRoute}
-              className="gap-2"
-            >
+            <Button variant="secondary" onClick={updateRoute} loading={updatingRoute} className="gap-2">
               <RefreshCw size={16} />
               Quitar {pendingRemovalIds.size} tienda{pendingRemovalIds.size > 1 ? 's' : ''}
             </Button>
           )}
 
           {orderChanged && (
-            <Button variant="primary" onClick={saveOrder} loading={savingOrder} className="gap-2">
+            <Button onClick={saveOrder} loading={savingOrder} className="gap-2">
               <ListOrdered size={16} />
               Guardar nuevo orden
             </Button>
           )}
         </div>
 
-        {/* Stops list - full width */}
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text">
-              <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
-              Paradas ({completedStops}/{stops.length})
-            </h3>
-            {trip.status !== 'completed' && trip.status !== 'cancelled' && (
+        {/* Stops */}
+        <SectionTitle
+          action={
+            trip.status !== 'completed' && trip.status !== 'cancelled' ? (
               <Button
                 size="sm"
                 variant={showAddStore ? 'ghost' : 'outline'}
@@ -781,258 +773,255 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
                 {showAddStore ? <X size={15} /> : <Plus size={15} />}
                 {showAddStore ? 'Cerrar' : 'Agregar tienda'}
               </Button>
-            )}
-          </div>
+            ) : null
+          }
+        >
+          Paradas ({completedStops}/{stops.length})
+        </SectionTitle>
 
-          {/* Add-a-store search panel */}
-          {showAddStore && trip.status !== 'completed' && trip.status !== 'cancelled' && (
-            <Card className="!rounded-2xl mb-3 border-indigo-200 bg-indigo-50/40">
-              <p className="text-sm font-semibold">Agregar una tienda a esta ruta</p>
-              <p className="mt-0.5 text-xs text-text-muted">
-                Busca una tienda cercana y agrégala al final de la ruta.
-              </p>
-              <div className="mt-3 flex gap-2">
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearchStore()}
-                  placeholder="Ej: Ross Kissimmee, Walmart Orlando..."
-                  className="flex-1"
-                />
-                <Button onClick={handleSearchStore} loading={searching} className="shrink-0 px-3">
-                  <Search size={18} />
-                </Button>
-              </div>
+        {/* Add-a-store panel */}
+        {showAddStore && trip.status !== 'completed' && trip.status !== 'cancelled' && (
+          <Card className="border-primary/30 bg-primary/[0.03]">
+            <p className="text-sm font-semibold">Agregar una tienda a esta ruta</p>
+            <p className="mt-0.5 text-xs text-text-muted">
+              Busca una tienda cercana y agrégala al final de la ruta.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchStore()}
+                placeholder="Ej: Ross Kissimmee..."
+                className="flex-1"
+              />
+              <Button onClick={handleSearchStore} loading={searching} className="shrink-0 !px-3.5">
+                <Search size={18} />
+              </Button>
+            </div>
 
-              {searchResults.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {searchResults.map((result) => (
-                    <div
-                      key={result.google_place_id}
-                      className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface p-2.5"
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
-                          <MapPin size={15} />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{result.name}</p>
-                          <p className="truncate text-xs text-text-muted">{result.address}</p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAddStore(result)}
-                        loading={addingStoreId === result.google_place_id}
-                        className="shrink-0 gap-1"
-                      >
-                        <Plus size={14} />
-                        Agregar
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!searching && searchResults.length === 0 && searchQuery.trim() && (
-                <p className="mt-3 text-xs text-text-muted">
-                  Escribe el nombre de la tienda y presiona buscar.
-                </p>
-              )}
-            </Card>
-          )}
-
-          {stops.length === 0 ? (
-            <Card className="!rounded-2xl py-8 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100">
-                <StoreIcon size={22} className="text-indigo-500" />
-              </div>
-              <p className="font-semibold">Esta ruta no tiene tiendas todavía</p>
-              <p className="mt-1 text-sm text-text-muted">
-                Usa «Agregar tienda» para añadir la primera parada.
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {stops.map((stop, index) => {
-                const isNext = index === activeStopIndex && trip.status === 'active';
-                const isPendingRemoval = pendingRemovalIds.has(stop.id);
-                return (
-                  <Card
-                    key={stop.id}
-                    className={`!rounded-2xl transition-all ${isNext ? 'ring-2 ring-primary' : ''} ${
-                      isPendingRemoval ? 'opacity-50' : ''
-                    }`}
+            {searchResults.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {searchResults.map((result) => (
+                  <div
+                    key={result.google_place_id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface p-2.5"
                   >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                          stop.status === 'completed'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : stop.status === 'skipped'
-                              ? 'bg-gray-100 text-gray-500'
-                              : isNext
-                                ? 'bg-brand-gradient text-white shadow-md shadow-indigo-500/25'
-                                : 'bg-indigo-50 text-indigo-600'
-                        }`}
-                      >
-                        {stop.status === 'completed' ? <CheckCircle2 size={16} /> : stop.stop_order}
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <IconChip tone="primary">
+                        <MapPin size={15} />
+                      </IconChip>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{result.name}</p>
+                        <p className="truncate text-xs text-text-muted">{result.address}</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAddStore(result)}
+                      loading={addingStoreId === result.google_place_id}
+                      className="shrink-0 gap-1"
+                    >
+                      <Plus size={14} />
+                      Agregar
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {stops.length === 0 ? (
+          <Card className="py-8 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+              <StoreIcon size={22} className="text-primary" />
+            </div>
+            <p className="font-semibold">Esta ruta no tiene tiendas todavía</p>
+            <p className="mt-1 text-sm text-text-muted">
+              Usa «Agregar tienda» para añadir la primera parada.
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-2.5">
+            {stops.map((stop, index) => {
+              const isNext = index === activeStopIndex && trip.status === 'active';
+              const isPendingRemoval = pendingRemovalIds.has(stop.id);
+              return (
+                <Card
+                  key={stop.id}
+                  className={`${isNext ? 'ring-2 ring-primary' : ''} ${isPendingRemoval ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
+                        stop.status === 'completed'
+                          ? 'bg-success/12 text-success'
+                          : stop.status === 'skipped'
+                            ? 'bg-surface-secondary text-text-muted'
+                            : isNext
+                              ? 'bg-primary text-white'
+                              : 'bg-primary/10 text-primary'
+                      }`}
+                    >
+                      {stop.status === 'completed' ? <CheckCircle2 size={17} /> : stop.stop_order}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold">{stop.store.name}</p>
+                        <ScoreBadge score={storeScores[stop.store_id] ?? stop.score} />
+                        {isPendingRemoval && (
+                          <span className="text-xs font-medium text-danger">Se quitará</span>
+                        )}
+                      </div>
+                      <p className="truncate text-xs text-text-muted">{stop.store.address}</p>
+
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-text-muted tabular">
+                        {stop.drive_minutes_from_previous != null && (
+                          <span>{stop.drive_minutes_from_previous} min manejo</span>
+                        )}
+                        {stop.drive_miles_from_previous != null && (
+                          <span>{stop.drive_miles_from_previous} mi</span>
+                        )}
+                        <span>{stop.planned_duration_minutes} min en tienda</span>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-semibold">{stop.store.name}</p>
-                          <ScoreBadge score={storeScores[stop.store_id] ?? stop.score} />
-                          {isPendingRemoval && (
-                            <span className="text-xs font-medium text-danger">Se quitará</span>
-                          )}
+                      {(stop.total_items_bought > 0 || stop.total_spent > 0) && (
+                        <div className="mt-1.5 flex items-center gap-3 text-xs">
+                          <span className="flex items-center gap-1 text-text-secondary tabular">
+                            <Package size={12} />
+                            {stop.total_items_bought} artículos
+                          </span>
+                          <span className="flex items-center gap-1 font-medium text-success tabular">
+                            <DollarSign size={12} />
+                            ${stop.total_spent.toLocaleString()}
+                          </span>
                         </div>
-                        <p className="truncate text-xs text-text-muted">{stop.store.address}</p>
+                      )}
 
-                        <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
-                          {stop.drive_minutes_from_previous != null && (
-                            <span>{stop.drive_minutes_from_previous} min manejo</span>
-                          )}
-                          {stop.drive_miles_from_previous != null && (
-                            <span>{stop.drive_miles_from_previous} mi</span>
-                          )}
-                          <span>{stop.planned_duration_minutes} min en tienda</span>
-                        </div>
+                      <div className="mt-2">
+                        <StopStatusBadge status={stop.status} />
+                      </div>
 
-                        {(stop.total_items_bought > 0 || stop.total_spent > 0) && (
-                          <div className="mt-1 flex items-center gap-3 text-xs">
-                            <span className="flex items-center gap-1 text-text-secondary">
-                              <Package size={12} />
-                              {stop.total_items_bought} artículos
-                            </span>
-                            <span className="flex items-center gap-1 font-medium text-emerald-600">
-                              <DollarSign size={12} />
-                              ${stop.total_spent.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="mt-2 flex items-center gap-2">
-                          <StopStatusBadge status={stop.status} />
-                        </div>
-
-                        {(isNext || stop.status === 'arrived') && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {stop.status === 'pending' && (
-                              <>
-                                <a
-                                  href={buildWazeUrl(stop.store.lat, stop.store.lng)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Button
-                                    size="sm"
-                                    variant="primary"
-                                    className="gap-1"
-                                    onClick={() => updateStopStatus(stop.id, 'on_the_way')}
-                                  >
-                                    <Navigation size={14} />
-                                    Waze
-                                  </Button>
-                                </a>
-                                <a
-                                  href={buildGoogleMapsStopUrl(stop.store.lat, stop.store.lng)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Button size="sm" variant="outline" className="gap-1">
-                                    <ExternalLink size={14} />
-                                    Maps
-                                  </Button>
-                                </a>
-                              </>
-                            )}
-                            {(stop.status === 'pending' || stop.status === 'on_the_way') && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateStopStatus(stop.id, 'arrived')}
+                      {(isNext || stop.status === 'arrived') && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {stop.status === 'pending' && (
+                            <>
+                              <a
+                                href={buildWazeUrl(stop.store.lat, stop.store.lng)}
+                                target="_blank"
+                                rel="noopener noreferrer"
                               >
-                                Ya llegué
-                              </Button>
-                            )}
-                            {stop.status === 'arrived' && (
-                              <Link href={`/trip/${id}/stop/${stop.id}`}>
-                                <Button size="sm" variant="secondary" className="gap-1">
-                                  <CheckCircle2 size={14} />
-                                  Completar visita
+                                <Button
+                                  size="sm"
+                                  className="gap-1"
+                                  onClick={() => updateStopStatus(stop.id, 'on_the_way')}
+                                >
+                                  <Navigation size={14} />
+                                  Waze
                                 </Button>
-                              </Link>
-                            )}
+                              </a>
+                              <a
+                                href={buildGoogleMapsStopUrl(stop.store.lat, stop.store.lng)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Button size="sm" variant="outline" className="gap-1">
+                                  <ExternalLink size={14} />
+                                  Maps
+                                </Button>
+                              </a>
+                            </>
+                          )}
+                          {(stop.status === 'pending' || stop.status === 'on_the_way') && (
                             <Button
                               size="sm"
-                              variant="ghost"
-                              onClick={() => updateStopStatus(stop.id, 'skipped')}
-                              className="gap-1 text-text-muted"
+                              variant="outline"
+                              onClick={() => updateStopStatus(stop.id, 'arrived')}
                             >
-                              <SkipForward size={14} />
-                              Saltar
+                              Ya llegué
                             </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-2">
-                        {trip.status === 'planning' && (
-                          <div className="flex flex-col">
-                            <button
-                              onClick={() => moveStop(index, -1)}
-                              disabled={index === 0}
-                              className="rounded p-0.5 text-text-muted transition-colors hover:text-primary disabled:opacity-30"
-                              title="Subir"
-                            >
-                              <ChevronUp size={16} />
-                            </button>
-                            <button
-                              onClick={() => moveStop(index, 1)}
-                              disabled={index === stops.length - 1}
-                              className="rounded p-0.5 text-text-muted transition-colors hover:text-primary disabled:opacity-30"
-                              title="Bajar"
-                            >
-                              <ChevronDown size={16} />
-                            </button>
-                          </div>
-                        )}
-                        {trip.status === 'planning' && (
-                          <button
-                            onClick={() => toggleStopRemoval(stop.id)}
-                            className={`rounded-lg p-1.5 transition-colors ${
-                              isPendingRemoval
-                                ? 'text-danger hover:bg-surface-secondary'
-                                : 'text-text-muted hover:bg-red-50 hover:text-danger'
-                            }`}
-                            title={isPendingRemoval ? 'Deshacer' : 'Quitar tienda'}
+                          )}
+                          {stop.status === 'arrived' && (
+                            <Link href={`/trip/${id}/stop/${stop.id}`}>
+                              <Button size="sm" variant="secondary" className="gap-1">
+                                <CheckCircle2 size={14} />
+                                Completar visita
+                              </Button>
+                            </Link>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => updateStopStatus(stop.id, 'skipped')}
+                            className="gap-1"
                           >
-                            {isPendingRemoval ? <Undo2 size={16} /> : <Trash2 size={16} />}
-                          </button>
-                        )}
-                        <Link href={`/trip/${id}/stop/${stop.id}`}>
-                          <ChevronRight size={16} className="text-text-muted" />
-                        </Link>
-                      </div>
+                            <SkipForward size={14} />
+                            Saltar
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+
+                    <div className="flex shrink-0 items-center gap-1">
+                      {trip.status === 'planning' && (
+                        <div className="flex flex-col">
+                          <button
+                            onClick={() => moveStop(index, -1)}
+                            disabled={index === 0}
+                            className="rounded p-1 text-text-muted transition-colors hover:text-primary disabled:opacity-30"
+                            title="Subir"
+                          >
+                            <ChevronUp size={17} />
+                          </button>
+                          <button
+                            onClick={() => moveStop(index, 1)}
+                            disabled={index === stops.length - 1}
+                            className="rounded p-1 text-text-muted transition-colors hover:text-primary disabled:opacity-30"
+                            title="Bajar"
+                          >
+                            <ChevronDown size={17} />
+                          </button>
+                        </div>
+                      )}
+                      {trip.status === 'planning' && (
+                        <button
+                          onClick={() => toggleStopRemoval(stop.id)}
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+                            isPendingRemoval
+                              ? 'text-danger hover:bg-surface-secondary'
+                              : 'text-text-muted hover:bg-danger/10 hover:text-danger'
+                          }`}
+                          title={isPendingRemoval ? 'Deshacer' : 'Quitar tienda'}
+                        >
+                          {isPendingRemoval ? <Undo2 size={17} /> : <Trash2 size={17} />}
+                        </button>
+                      )}
+                      <Link
+                        href={`/trip/${id}/stop/${stop.id}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-surface-secondary hover:text-text"
+                        aria-label="Abrir parada"
+                      >
+                        <ChevronRight size={18} />
+                      </Link>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Products bought during this route — grouped by product code */}
+      {/* Products modal */}
       {showProducts && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
           onClick={() => setShowProducts(false)}
         >
           <div
-            className="flex max-h-[85vh] w-full flex-col rounded-t-2xl bg-surface sm:max-w-lg sm:rounded-2xl"
+            className="flex max-h-[85vh] w-full flex-col rounded-t-2xl border border-border bg-surface sm:max-w-lg sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -1044,9 +1033,10 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
               </div>
               <button
                 onClick={() => setShowProducts(false)}
-                className="rounded-full p-1.5 text-text-muted hover:bg-surface-secondary"
+                aria-label="Cerrar"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-surface-secondary hover:text-text"
               >
-                <X size={18} />
+                <X size={19} />
               </button>
             </div>
 
@@ -1067,9 +1057,9 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
                       href={`https://www.google.com/search?q=${encodeURIComponent(p.code)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-xl border border-border p-3 transition-colors hover:border-primary/40 hover:bg-indigo-50/40"
+                      className="flex items-center gap-3 rounded-xl border border-border p-3 transition-colors hover:border-primary/40 hover:bg-surface-secondary"
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-sm font-bold text-primary">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary tabular">
                         {p.quantity}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -1078,10 +1068,10 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
                           {p.code}
                           {p.stores.length > 0 && ` · ${p.stores.join(', ')}`}
                         </p>
-                        <div className="mt-0.5 flex items-center gap-3 text-xs">
+                        <div className="mt-0.5 flex items-center gap-3 text-xs tabular">
                           <span className="text-text-secondary">COGS ${p.totalCost.toFixed(2)}</span>
                           <span
-                            className={`font-medium ${p.totalProfit >= 0 ? 'text-emerald-600' : 'text-danger'}`}
+                            className={`font-medium ${p.totalProfit >= 0 ? 'text-success' : 'text-danger'}`}
                           >
                             Utilidad ${p.totalProfit.toFixed(2)}
                           </span>
@@ -1095,7 +1085,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
             </div>
 
             {tripProducts && tripProducts.length > 0 && (
-              <div className="border-t border-border px-4 py-3 text-center text-xs text-text-muted">
+              <div className="border-t border-border px-4 py-3 text-center text-xs text-text-muted tabular">
                 {tripProducts.reduce((s, p) => s + p.quantity, 0)} unidades ·{' '}
                 {tripProducts.length} producto{tripProducts.length !== 1 ? 's' : ''} distintos
               </div>

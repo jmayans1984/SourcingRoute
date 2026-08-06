@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import { Header } from '@/components/layout/header';
 import { AppShell } from '@/components/layout/app-shell';
-import { Card, CardTitle } from '@/components/ui/card';
+import { Card, CardTitle, IconChip } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ThemeSwitcher } from '@/components/ui/theme-toggle';
+import { toast } from '@/components/ui/toast';
 import { CustomChainsInput } from '@/components/route/custom-chains-input';
 import { LocationInput } from '@/components/route/location-input';
 import type { UserProfile } from '@/types/database';
-import { Save, LogOut, FileSpreadsheet, Wallet, Plus, Trash2 } from 'lucide-react';
+import { Save, LogOut, FileSpreadsheet, Wallet, Plus, X, Palette } from 'lucide-react';
 
 interface ExpenseCategory {
   id: string;
@@ -96,6 +98,7 @@ export default function ProfilePage() {
     }
 
     setSaving(false);
+    toast.success('Perfil guardado');
   }
 
   async function addCategory(name: string) {
@@ -118,6 +121,7 @@ export default function ProfilePage() {
 
     if (data) {
       setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      toast.success(`Cuenta "${trimmed}" creada`);
     }
     setNewCategory('');
   }
@@ -126,6 +130,7 @@ export default function ProfilePage() {
     const supabase = createClient();
     await supabase.from('expense_categories').delete().eq('id', catId);
     setCategories((prev) => prev.filter((c) => c.id !== catId));
+    toast.info('Cuenta eliminada');
   }
 
   async function handleSignOut() {
@@ -140,7 +145,23 @@ export default function ProfilePage() {
       <Header title="Perfil" />
 
       <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
-        <Card className="!rounded-2xl">
+        {/* Appearance */}
+        <Card>
+          <div className="flex items-center gap-2">
+            <IconChip tone="primary">
+              <Palette size={16} />
+            </IconChip>
+            <CardTitle>Apariencia</CardTitle>
+          </div>
+          <p className="mt-1 text-xs text-text-muted">
+            Elige cómo se ve la app. El modo oscuro es más cómodo de noche.
+          </p>
+          <div className="mt-3">
+            <ThemeSwitcher />
+          </div>
+        </Card>
+
+        <Card>
           <CardTitle>Información Personal</CardTitle>
           <div className="mt-3 space-y-3">
             <Input
@@ -165,7 +186,7 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        <Card className="!rounded-2xl">
+        <Card>
           <CardTitle>Ajustes Predeterminados</CardTitle>
           <div className="mt-3 space-y-3">
             <Input
@@ -194,11 +215,11 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        <Card className="!rounded-2xl">
+        <Card>
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+            <IconChip tone="success">
               <FileSpreadsheet size={16} />
-            </span>
+            </IconChip>
             <CardTitle>Google Sheets — Calculadora Amazon</CardTitle>
           </div>
           <p className="mt-1 text-xs text-text-muted">
@@ -218,11 +239,11 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        <Card className="!rounded-2xl">
+        <Card>
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+            <IconChip tone="warning">
               <Wallet size={16} />
-            </span>
+            </IconChip>
             <CardTitle>Cuentas Contables — Gastos de Ruta</CardTitle>
           </div>
           <p className="mt-1 text-xs text-text-muted">
@@ -258,15 +279,16 @@ export default function ProfilePage() {
               {categories.map((cat) => (
                 <span
                   key={cat.id}
-                  className="flex items-center gap-1.5 rounded-full border border-border bg-surface-secondary px-3 py-1.5 text-sm"
+                  className="flex items-center gap-1.5 rounded-full bg-surface-secondary py-1.5 pl-3 pr-1.5 text-sm font-medium"
                 >
                   {cat.name}
                   <button
                     type="button"
                     onClick={() => removeCategory(cat.id)}
-                    className="text-text-muted hover:text-danger"
+                    aria-label={`Quitar ${cat.name}`}
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-danger/15 hover:text-danger"
                   >
-                    <Trash2 size={13} />
+                    <X size={13} />
                   </button>
                 </span>
               ))}
@@ -297,7 +319,7 @@ export default function ProfilePage() {
           )}
         </Card>
 
-        <Card className="!rounded-2xl">
+        <Card>
           <CardTitle>Tus Tiendas</CardTitle>
           <p className="mt-1 text-xs text-text-muted">
             Agrega las tiendas que quieres visitar en tus rutas
