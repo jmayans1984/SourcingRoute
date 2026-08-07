@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase-client';
 import { Header } from '@/components/layout/header';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TripStatusBadge } from '@/components/ui/badge';
+import { TripStatusBadge, RatingBadge } from '@/components/ui/badge';
 import { RouteDetailModal } from '@/components/route/route-detail-modal';
 import { formatDuration } from '@/utils/geo';
 import {
@@ -28,20 +28,27 @@ import {
   X,
   DollarSign,
 } from 'lucide-react';
-import type { SourcingTrip } from '@/types/database';
-
-interface DashboardStats {
-  totalTrips: number;
-  totalStoresVisited: number;
-  totalProducts: number;
-  totalProfit: number;
-}
+import type { SourcingTrip, StoreRating } from '@/types/database';
 
 interface TripTotals {
   itemsBought: number;
   spent: number;
   storesVisited: number;
   totalStops: number;
+  profit: number;
+}
+
+// A store_visits row with trip_id = null — logged via "Visita Suelta", not
+// tied to any route. Kept separate from TripTotals so it can be folded into
+// the period KPIs without a route to hang off of.
+interface LooseVisit {
+  id: string;
+  storeId: string;
+  storeName: string;
+  visitedAt: string;
+  rating: StoreRating | null;
+  spent: number;
+  itemsBought: number;
   profit: number;
 }
 
@@ -134,16 +141,11 @@ function DeltaPill({
 export default function DashboardPage() {
   const router = useRouter();
   const [trips, setTrips] = useState<SourcingTrip[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalTrips: 0,
-    totalStoresVisited: 0,
-    totalProducts: 0,
-    totalProfit: 0,
-  });
   const [userName, setUserName] = useState('');
   const [loading, setLoading] = useState(true);
   const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
   const [tripTotals, setTripTotals] = useState<Record<string, TripTotals>>({});
+  const [looseVisits, setLooseVisits] = useState<LooseVisit[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<SourcingTrip | null>(null);
   const [period, setPeriod] = useState<PeriodFilter>('week');
   const [query, setQuery] = useState('');
@@ -194,18 +196,32 @@ export default function DashboardPage() {
       }
     }
 
-    const { data: visitStats } = await supabase
+    // Visits logged via "Visita Suelta" (trip_id null) — not part of any
+    // route, so they don't show up in tripTotals. Folded into the period
+    // KPIs separately below.
+    const { data: standaloneVisits } = await supabase
       .from('store_visits')
-      .select('id, estimated_profit, products_found')
-      .eq('user_id', user.id);
+      .select('id, store_id, visited_at, rating, estimated_profit, total_spent, total_items_bought, store:stores(name)')
+      .eq('user_id', user.id)
+      .is('trip_id', null)
+      .order('visited_at', { ascending: false });
 
-    if (visitStats) {
-      setStats({
-        totalTrips: allTrips?.length ?? 0,
-        totalStoresVisited: visitStats.length,
-        totalProducts: visitStats.reduce((sum, v) => sum + (v.products_found || 0), 0),
-        totalProfit: visitStats.reduce((sum, v) => sum + (v.estimated_profit || 0), 0),
-      });
+    if (standaloneVisits) {
+      setLooseVisits(
+        standaloneVisits.map((v) => {
+          const store = v.store as unknown as { name: string } | null;
+          return {
+            id: v.id,
+            storeId: v.store_id,
+            storeName: store?.name || 'Tienda',
+            visitedAt: v.visited_at,
+            rating: v.rating,
+            spent: v.total_spent || 0,
+            itemsBought: v.total_items_bought || 0,
+            profit: v.estimated_profit || 0,
+          };
+        })
+      );
     }
 
     setLoading(false);
@@ -259,6 +275,16 @@ export default function DashboardPage() {
     ? trips.filter((t) => new Date(t.trip_date) >= periodStart!)
     : trips;
 
+  // Visits logged without a route ("Visita Suelta") fall in the same period
+  // window so they count toward the weekly/monthly summary too.
+  const periodLooseVisits = periodStart
+    ? looseVisits.filter((v) => new Date(v.visitedAt) >= periodStart!)
+    : looseVisits;
+  const looseSpent = periodLooseVisits.reduce((sum, v) => sum + v.spent, 0);
+  const looseItems = periodLooseVisits.reduce((sum, v) => sum + v.itemsBought, 0);
+  const looseProfit = periodLooseVisits.reduce((sum, v) => sum + v.profit, 0);
+  const looseStores = periodLooseVisits.length;
+
   // Text search runs on top of the period filter (name or chains)
   const filteredTrips = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -270,25 +296,18 @@ export default function DashboardPage() {
     });
   }, [periodTrips, query]);
 
-  // KPIs derived from the period (independent of the text search)
-  const filteredTotalSpent = periodTrips.reduce(
-    (sum, t) => sum + (tripTotals[t.id]?.spent || 0),
-    0
-  );
-  const filteredTotalItems = periodTrips.reduce(
-    (sum, t) => sum + (tripTotals[t.id]?.itemsBought || 0),
-    0
-  );
-  const filteredTotalStores = periodTrips.reduce(
-    (sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0),
-    0
-  );
+  // KPIs derived from the period (routes + standalone visits combined)
+  const filteredTotalSpent =
+    periodTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.spent || 0), 0) + looseSpent;
+  const filteredTotalItems =
+    periodTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.itemsBought || 0), 0) + looseItems;
+  const filteredTotalStores =
+    periodTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0), 0) + looseStores;
   // Real projected profit = sum of each stop's estimated_profit across the
-  // period's trips (not a ratio approximation, so every route counts).
-  const filteredTotalProfit = periodTrips.reduce(
-    (sum, t) => sum + (tripTotals[t.id]?.profit || 0),
-    0
-  );
+  // period's trips, plus standalone visits (not a ratio approximation, so
+  // every completed store counts).
+  const filteredTotalProfit =
+    periodTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.profit || 0), 0) + looseProfit;
   const filteredAvgCost =
     filteredTotalItems > 0 ? filteredTotalSpent / filteredTotalItems : 0;
 
@@ -304,13 +323,22 @@ export default function DashboardPage() {
       const tripDate = new Date(t.trip_date);
       return tripDate >= prevPeriod.start && tripDate <= prevPeriod.end;
     });
-    prevTotalSpent = prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.spent || 0), 0);
-    prevTotalItems = prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.itemsBought || 0), 0);
-    prevTotalStores = prevTrips.reduce(
-      (sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0),
-      0
-    );
-    prevTotalProfit = prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.profit || 0), 0);
+    const prevLooseVisits = looseVisits.filter((v) => {
+      const visitDate = new Date(v.visitedAt);
+      return visitDate >= prevPeriod.start && visitDate <= prevPeriod.end;
+    });
+    prevTotalSpent =
+      prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.spent || 0), 0) +
+      prevLooseVisits.reduce((sum, v) => sum + v.spent, 0);
+    prevTotalItems =
+      prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.itemsBought || 0), 0) +
+      prevLooseVisits.reduce((sum, v) => sum + v.itemsBought, 0);
+    prevTotalStores =
+      prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0), 0) +
+      prevLooseVisits.length;
+    prevTotalProfit =
+      prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.profit || 0), 0) +
+      prevLooseVisits.reduce((sum, v) => sum + v.profit, 0);
   }
 
   // Averages track completed work as you go: a route counts as soon as it has
@@ -378,7 +406,15 @@ export default function DashboardPage() {
   ];
 
   const secondary = [
-    { label: 'Rutas', value: `${periodTrips.length}`, sub: PERIOD_LONG[period], icon: Route },
+    {
+      label: 'Rutas',
+      value: `${periodTrips.length}`,
+      sub:
+        looseStores > 0
+          ? `+${looseStores} visita${looseStores !== 1 ? 's' : ''} suelta${looseStores !== 1 ? 's' : ''}`
+          : PERIOD_LONG[period],
+      icon: Route,
+    },
     {
       label: 'Costo/Artículo',
       value: `$${filteredAvgCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -775,6 +811,60 @@ export default function DashboardPage() {
             </>
           )}
         </div>
+
+        {/* Standalone visits — logged via "Visita Suelta", no route attached */}
+        {looseVisits.length > 0 && (
+          <div>
+            <SectionTitle
+              action={
+                <span className="rounded-full bg-surface-secondary px-2.5 py-0.5 text-xs font-semibold text-text-secondary tabular">
+                  {periodLooseVisits.length}
+                </span>
+              }
+            >
+              Visitas Sueltas
+            </SectionTitle>
+            <div className="mt-3">
+              {periodLooseVisits.length === 0 ? (
+                <Card className="py-6 text-center text-sm text-text-muted">
+                  Sin visitas sueltas en {PERIOD_LONG[period].toLowerCase()}
+                </Card>
+              ) : (
+                <div className="space-y-2.5">
+                  {periodLooseVisits.map((v) => (
+                    <Link key={v.id} href={`/stores/${v.storeId}`}>
+                      <Card className="flex items-center gap-3 transition-colors hover:bg-surface-secondary">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
+                          {v.storeName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-sm font-semibold">{v.storeName}</p>
+                            {v.rating && <RatingBadge rating={v.rating} />}
+                          </div>
+                          <p className="text-xs text-text-muted tabular">
+                            {new Date(v.visitedAt).toLocaleDateString()} · {v.itemsBought} artículos
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p
+                            className={`text-sm font-semibold tabular ${v.profit >= 0 ? 'text-success' : 'text-danger'}`}
+                          >
+                            ${Math.round(v.profit).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-text-muted tabular">
+                            ${v.spent.toLocaleString()} gastado
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="shrink-0 text-text-muted" />
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedTrip && (
