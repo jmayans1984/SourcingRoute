@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase-client';
@@ -9,14 +9,12 @@ import { AppShell } from '@/components/layout/app-shell';
 import { Card, CardTitle, IconChip } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { StopStatusBadge } from '@/components/ui/badge';
-import { toast } from '@/components/ui/toast';
 import { Collapsible } from '@/components/ui/collapsible';
-import { buildWazeUrl, buildGoogleMapsStopUrl } from '@/utils/navigation';
-import type { TripStop, Store, StoreRating, WifiSignal } from '@/types/database';
+import { toast } from '@/components/ui/toast';
+import type { StoreRating, WifiSignal } from '@/types/database';
 import {
-  Navigation,
-  ExternalLink,
+  Search,
+  MapPin,
   Star,
   Save,
   Wifi,
@@ -29,10 +27,25 @@ import {
   DollarSign,
   Package,
   StickyNote,
+  ArrowLeft,
+  Store as StoreIcon,
 } from 'lucide-react';
 
-interface StopWithStore extends TripStop {
-  store: Store;
+interface FindResult {
+  id: string | null;
+  google_place_id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  phone: string | null;
+  opening_hours: Record<string, unknown> | null;
+}
+
+interface SelectedStore {
+  id: string;
+  name: string;
+  address: string;
 }
 
 interface ProductEntry {
@@ -55,15 +68,20 @@ const wifiOptions: { value: WifiSignal; label: string; icon: typeof Wifi }[] = [
   { value: 'good', label: 'Buena', icon: Wifi },
 ];
 
-export default function StopDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string; stopId: string }>;
-}) {
-  const { id, stopId } = use(params);
+export default function NewQuickVisitPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [stop, setStop] = useState<StopWithStore | null>(null);
+
+  // Step 1: find the store
+  const [homeLat, setHomeLat] = useState<number | null>(null);
+  const [homeLng, setHomeLng] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<FindResult[]>([]);
+  const [selectingId, setSelectingId] = useState<string | null>(null);
+  const [selectedStore, setSelectedStore] = useState<SelectedStore | null>(null);
+
+  // Step 2: log the visit — same fields as a route stop, minus trip context
   const [rating, setRating] = useState<StoreRating | null>(null);
   const [wifiSignal, setWifiSignal] = useState<WifiSignal | null>(null);
   const [notes, setNotes] = useState('');
@@ -86,56 +104,64 @@ export default function StopDetailPage({
   } | null>(null);
 
   useEffect(() => {
-    loadStop();
-  }, [stopId]);
-
-  async function loadStop() {
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from('trip_stops')
-      .select('*, store:stores(*)')
-      .eq('id', stopId)
-      .single();
-
-    if (error) {
-      console.error('[loadStop] trip_stops select failed:', error);
-    }
-
-    if (data) {
-      const stopData = data as StopWithStore;
-      setStop(stopData);
-      setRating(stopData.user_rating);
-      setWifiSignal(stopData.wifi_signal);
-      setNotes(stopData.notes || '');
-      setTotalSpent(stopData.total_spent || 0);
-      setTotalItemsBought(stopData.total_items_bought || 0);
-      setProjectedProfit(stopData.estimated_profit || 0);
-      setProjectedSales(stopData.projected_sales || 0);
-      setReceiptUrls(stopData.receipt_photo_urls || []);
-
-      // Load previously saved products for this stop (e.g. viewing a completed visit)
-      const { data: savedProducts } = await supabase
-        .from('found_products')
-        .select('product_name, upc, buy_cost, estimated_sale_price, quantity_found, quantity_bought, estimated_profit, notes')
-        .eq('trip_stop_id', stopId);
-
-      if (savedProducts && savedProducts.length > 0) {
-        setProducts(
-          savedProducts.map((p) => ({
-            product_name: p.product_name,
-            upc: p.upc || undefined,
-            buy_cost: p.buy_cost || 0,
-            estimated_sale_price: p.estimated_sale_price || 0,
-            quantity_found: p.quantity_found || 0,
-            quantity_bought: p.quantity_bought || 0,
-            total_cost: (p.buy_cost || 0) * (p.quantity_bought || 0),
-            total_sales: (p.estimated_sale_price || 0) * (p.quantity_bought || 0),
-            total_profit: p.estimated_profit || 0,
-            notes: p.notes || '',
-          }))
-        );
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from('users_profile')
+        .select('home_lat, home_lng')
+        .eq('user_id', user.id)
+        .single();
+      if (profile) {
+        setHomeLat(profile.home_lat);
+        setHomeLng(profile.home_lng);
       }
+    });
+  }, []);
+
+  async function handleSearch() {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    setSearchResults([]);
+    try {
+      const response = await fetch('/api/stores/find', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery, lat: homeLat, lng: homeLng }),
+      });
+      const data = await response.json();
+      const results = data.results || [];
+      setSearchResults(results);
+      if (results.length === 0) toast.info('No se encontraron tiendas con ese nombre');
+    } catch {
+      toast.error('No se pudo buscar. Revisa tu conexión.');
+    } finally {
+      setSearching(false);
     }
+  }
+
+  async function handleSelectStore(result: FindResult) {
+    setSelectingId(result.google_place_id);
+    try {
+      const response = await fetch('/api/stores/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      });
+      const data = await response.json();
+      if (!data.store_id) {
+        toast.error('No se pudo guardar la tienda');
+        return;
+      }
+      setSelectedStore({ id: data.store_id, name: result.name, address: result.address });
+    } finally {
+      setSelectingId(null);
+    }
+  }
+
+  function changeStore() {
+    setSelectedStore(null);
+    setSearchResults([]);
   }
 
   function handleSpentChange(val: number) {
@@ -159,13 +185,17 @@ export default function StopDetailPage({
   async function importFromSheets() {
     setImporting(true);
     try {
-      const res = await fetch('/api/sheets/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const res = await fetch('/api/sheets/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error importing');
 
       if (!data.rowCount) {
         toast.error(
-          'No se encontraron filas con datos en la hoja (001-01, desde la fila 2). La hoja NO fue borrada. Revisa que los datos estén en las columnas correctas.'
+          'No se encontraron filas con datos en la hoja (001-01, desde la fila 2). La hoja NO fue borrada.'
         );
         return;
       }
@@ -190,14 +220,15 @@ export default function StopDetailPage({
   }
 
   async function loadHistoricalQty(names: string[]) {
-    if (names.length === 0) return;
+    if (names.length === 0 || !selectedStore) return;
     const supabase = createClient();
-    // Sum units bought of each product at OTHER stops within this same trip
+    // Sum units bought of each product in PREVIOUS visits to this same store
+    // (any trip or none) — the anti-overbuy signal, scoped by store instead
+    // of by route since a quick visit has no route.
     const { data } = await supabase
       .from('found_products')
       .select('product_name, quantity_bought')
-      .eq('trip_id', id)
-      .neq('trip_stop_id', stopId)
+      .eq('store_id', selectedStore.id)
       .in('product_name', names);
 
     if (!data) return;
@@ -210,7 +241,7 @@ export default function StopDetailPage({
 
   async function handleReceiptCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !stop) return;
+    if (!file || !selectedStore) return;
 
     setUploadingReceipt(true);
     const supabase = createClient();
@@ -221,7 +252,7 @@ export default function StopDetailPage({
     }
 
     const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${user.id}/${stop.store.id}/${Date.now()}.${ext}`;
+    const path = `${user.id}/${selectedStore.id}/${Date.now()}.${ext}`;
 
     const { error } = await supabase.storage.from('receipts').upload(path, file, {
       contentType: file.type,
@@ -247,50 +278,30 @@ export default function StopDetailPage({
     setReceiptUrls((prev) => prev.filter((u) => u !== url));
   }
 
-  async function saveAndComplete() {
-    if (!stop) return;
+  async function saveVisit() {
+    if (!selectedStore || !rating) return;
     setSaving(true);
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setSaving(false);
+      return;
+    }
 
     const productsProfit = products.reduce(
       (sum, p) => sum + (p.estimated_sale_price - p.buy_cost) * p.quantity_bought,
       0
     );
-    // Prefer projected profit from Google Sheets import; fall back to manual products
     const finalProfit = projectedProfit > 0 ? projectedProfit : productsProfit;
 
-    const { error: updateError } = await supabase
-      .from('trip_stops')
-      .update({
-        status: 'completed',
-        user_rating: rating,
-        wifi_signal: wifiSignal,
-        notes,
-        found_products_count: totalItemsBought || products.length,
-        estimated_profit: finalProfit,
-        projected_sales: projectedSales,
-        total_spent: totalSpent,
-        total_items_bought: totalItemsBought,
-        receipt_photo_urls: receiptUrls,
-        actual_departure_at: new Date().toISOString(),
-      })
-      .eq('id', stopId);
-
-    if (updateError) {
-      console.error('[saveAndComplete] trip_stops update failed:', updateError);
-      toast.error(`Error al guardar: ${updateError.message}`);
-      setSaving(false);
-      return;
-    }
-
-    if (rating) {
-      await supabase.from('store_visits').insert({
+    // No trip_id / trip_stop_id — this visit stands on its own.
+    const { data: visit, error } = await supabase
+      .from('store_visits')
+      .insert({
         user_id: user.id,
-        store_id: stop.store.id,
-        trip_id: id,
+        store_id: selectedStore.id,
+        trip_id: null,
         visited_at: new Date().toISOString(),
         rating,
         wifi_signal: wifiSignal,
@@ -301,20 +312,25 @@ export default function StopDetailPage({
         receipt_photo_urls: receiptUrls,
         clearance_found: false,
         notes,
-      });
+      })
+      .select('id')
+      .single();
+
+    if (error || !visit) {
+      console.error('[saveVisit] store_visits insert failed:', error);
+      toast.error(`Error al guardar: ${error?.message ?? 'inténtalo de nuevo'}`);
+      setSaving(false);
+      return;
     }
 
     if (products.length > 0) {
-      // Avoid duplicating rows if re-saving an already-completed stop
-      await supabase.from('found_products').delete().eq('trip_stop_id', stopId);
-
       const productRecords = products
         .filter((p) => p.product_name)
         .map((p) => ({
           user_id: user.id,
-          store_id: stop.store.id,
-          trip_id: id,
-          trip_stop_id: stopId,
+          store_id: selectedStore.id,
+          trip_id: null,
+          trip_stop_id: null,
           product_name: p.product_name,
           upc: p.upc || p.asin || null,
           buy_cost: p.buy_cost,
@@ -335,62 +351,107 @@ export default function StopDetailPage({
       }
     }
 
-    toast.success('Visita completada');
-    router.push(`/trip/${id}`);
+    toast.success('Visita registrada');
+    router.push(`/stores/${selectedStore.id}`);
   }
 
-  if (!stop) {
+  const liveROI = totalSpent > 0 ? Math.round((projectedProfit / totalSpent) * 100) : 0;
+
+  // ---------------------------------------------------------------------
+  // Step 1: find the store
+  // ---------------------------------------------------------------------
+  if (!selectedStore) {
     return (
       <AppShell>
-        <Header title="Cargando..." showBack />
-        <div className="flex items-center justify-center p-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Header title="Visita Suelta" subtitle="Registra una tienda sin necesidad de una ruta" showBack />
+
+        <div className="space-y-4 p-4 md:mx-auto md:max-w-lg md:p-0">
+          <Card>
+            <div className="flex items-center gap-2">
+              <IconChip tone="primary">
+                <StoreIcon size={16} />
+              </IconChip>
+              <CardTitle>¿En qué tienda estás?</CardTitle>
+            </div>
+            <p className="mt-1 text-xs text-text-muted">
+              Búscala por nombre — ej: &quot;Ross Kissimmee&quot; o &quot;Walmart Orlando&quot;.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Nombre de la tienda..."
+                className="flex-1"
+                autoFocus
+              />
+              <Button onClick={handleSearch} loading={searching} className="shrink-0 !px-3.5">
+                <Search size={18} />
+              </Button>
+            </div>
+          </Card>
+
+          {searchResults.length > 0 && (
+            <div className="space-y-2">
+              {searchResults.map((result) => (
+                <Card
+                  key={result.google_place_id}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <IconChip tone="primary">
+                      <MapPin size={15} />
+                    </IconChip>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{result.name}</p>
+                      <p className="truncate text-xs text-text-muted">{result.address}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleSelectStore(result)}
+                    loading={selectingId === result.google_place_id}
+                    className="shrink-0"
+                  >
+                    Seleccionar
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </AppShell>
     );
   }
 
-  const liveROI = totalSpent > 0 ? Math.round((projectedProfit / totalSpent) * 100) : 0;
-  const ratingLabel = rating === 3 ? 'Buena' : rating === 2 ? 'Regular' : rating === 1 ? 'Mala' : null;
-  const signalLabel = wifiOptions.find((o) => o.value === wifiSignal)?.label;
-
+  // ---------------------------------------------------------------------
+  // Step 2: log the visit
+  // ---------------------------------------------------------------------
   return (
     <AppShell>
-      <Header title={stop.store.name} subtitle={stop.store.address} showBack />
+      <Header title={selectedStore.name} subtitle={selectedStore.address} showBack />
 
       <div className="space-y-4 p-4 pb-32 md:mx-auto md:max-w-2xl md:p-0 md:pb-10">
-        {/* Store + navigation */}
+        {/* Store + change link */}
         <Card>
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate font-semibold">{stop.store.name}</p>
-              <p className="truncate text-sm text-text-muted">{stop.store.address}</p>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-base font-bold text-primary">
+                {selectedStore.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{selectedStore.name}</p>
+                <p className="truncate text-sm text-text-muted">{selectedStore.address}</p>
+              </div>
             </div>
-            <StopStatusBadge status={stop.status} />
-          </div>
-          <div className="mt-3 flex gap-2">
-            <a
-              href={buildWazeUrl(stop.store.lat, stop.store.lng)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1"
+            <button
+              type="button"
+              onClick={changeStore}
+              className="flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text"
             >
-              <Button fullWidth className="gap-1.5">
-                <Navigation size={16} />
-                Waze
-              </Button>
-            </a>
-            <a
-              href={buildGoogleMapsStopUrl(stop.store.lat, stop.store.lng)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1"
-            >
-              <Button fullWidth variant="outline" className="gap-1.5">
-                <ExternalLink size={16} />
-                Maps
-              </Button>
-            </a>
+              <ArrowLeft size={14} />
+              Cambiar
+            </button>
           </div>
         </Card>
 
@@ -420,7 +481,7 @@ export default function StopDetailPage({
           </Card>
         </div>
 
-        {/* Step 1 — totals */}
+        {/* Totals */}
         <Card>
           <div className="flex items-center gap-2">
             <IconChip tone="primary">
@@ -505,7 +566,7 @@ export default function StopDetailPage({
           </p>
         </Card>
 
-        {/* Step 2 — rating */}
+        {/* Rating — required, this IS the visit record */}
         <Card>
           <div className="flex items-center gap-2">
             <IconChip tone="warning">
@@ -537,9 +598,12 @@ export default function StopDetailPage({
               );
             })}
           </div>
+          {!rating && (
+            <p className="mt-2 text-xs text-text-muted">Requerida para guardar la visita.</p>
+          )}
         </Card>
 
-        {/* Products (only when there are any) */}
+        {/* Products */}
         {products.length > 0 && (
           <Card>
             <div className="flex items-center gap-2">
@@ -549,7 +613,7 @@ export default function StopDetailPage({
               <CardTitle>Productos ({products.length})</CardTitle>
             </div>
             <p className="mt-1 text-xs text-text-muted">
-              Agrupado por código · Hist. = comprados en otras tiendas de esta ruta.
+              Agrupado por código · Hist. = comprado antes en esta tienda.
             </p>
             <div className="mt-3 -mx-4 overflow-x-auto px-4">
               <table className="w-full min-w-[500px] text-xs tabular">
@@ -610,10 +674,14 @@ export default function StopDetailPage({
           </Card>
         )}
 
-        {/* Optional details — collapsed so the main flow stays short */}
+        {/* Optional details */}
         <Collapsible
           title="Señal de internet"
-          summary={signalLabel ? `Registrada: ${signalLabel}` : 'Opcional · afecta el puntaje'}
+          summary={
+            wifiSignal
+              ? `Registrada: ${wifiOptions.find((o) => o.value === wifiSignal)?.label}`
+              : 'Opcional · afecta el puntaje'
+          }
           icon={
             <IconChip tone="info">
               <Wifi size={16} />
@@ -716,19 +784,26 @@ export default function StopDetailPage({
 
         {/* Desktop save */}
         <div className="hidden md:block">
-          <Button fullWidth size="lg" onClick={saveAndComplete} loading={saving} className="gap-2">
+          <Button
+            fullWidth
+            size="lg"
+            onClick={saveVisit}
+            loading={saving}
+            disabled={!rating}
+            className="gap-2"
+          >
             <Save size={18} />
-            Guardar y Completar Visita
+            Guardar Visita
           </Button>
         </div>
       </div>
 
-      {/* Sticky save bar — mobile, above the bottom nav */}
+      {/* Sticky save bar — mobile */}
       <div className="fixed inset-x-0 bottom-[56px] z-40 border-t border-border bg-surface/95 p-3 backdrop-blur-md safe-bottom md:hidden">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[11px] text-text-muted">
-              Utilidad{ratingLabel ? ` · ${ratingLabel}` : ''}
+              {rating ? 'Utilidad' : 'Falta calificar'}
             </p>
             <p
               className={`text-lg font-bold leading-tight tabular ${projectedProfit >= 0 ? 'text-success' : 'text-danger'}`}
@@ -739,9 +814,15 @@ export default function StopDetailPage({
               )}
             </p>
           </div>
-          <Button size="lg" onClick={saveAndComplete} loading={saving} className="shrink-0 gap-2">
+          <Button
+            size="lg"
+            onClick={saveVisit}
+            loading={saving}
+            disabled={!rating}
+            className="shrink-0 gap-2"
+          >
             <Save size={18} />
-            Completar
+            Guardar
           </Button>
         </div>
       </div>

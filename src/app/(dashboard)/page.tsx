@@ -420,12 +420,20 @@ export default function DashboardPage() {
               Listo para hacer sourcing hoy
             </p>
           </div>
-          <Link href="/route/create" className="shrink-0">
-            <Button size="lg" fullWidth className="gap-2 md:w-auto">
-              <Route size={19} />
-              Crear Nueva Ruta
-            </Button>
-          </Link>
+          <div className="flex shrink-0 gap-2">
+            <Link href="/visit/new" className="flex-1 md:flex-none">
+              <Button size="lg" variant="outline" fullWidth className="gap-2 md:w-auto">
+                <Store size={19} />
+                Visita Suelta
+              </Button>
+            </Link>
+            <Link href="/route/create" className="flex-1 md:flex-none">
+              <Button size="lg" fullWidth className="gap-2 md:w-auto">
+                <Route size={19} />
+                Crear Ruta
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Period selector */}

@@ -240,7 +240,18 @@ export default function StoresPage() {
 
   return (
     <AppShell>
-      <Header title="Tiendas" subtitle={`${stores.length} visitadas · ${totalVisits} visitas`} />
+      <Header
+        title="Tiendas"
+        subtitle={`${stores.length} visitadas · ${totalVisits} visitas`}
+        action={
+          <Link href="/visit/new">
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0">
+              <Plus size={15} />
+              Visita
+            </Button>
+          </Link>
+        }
+      />
 
       <div className="space-y-4 p-4 md:p-0">
         {/* Summary */}
