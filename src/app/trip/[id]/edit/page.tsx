@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
@@ -11,6 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Toggle } from '@/components/ui/toggle';
 import { ScoreBadge } from '@/components/ui/badge';
 import { LocationInput } from '@/components/route/location-input';
+import { BrandCombobox } from '@/components/ui/brand-combobox';
+import { RoutePlannerMap, type RouteStats } from '@/components/maps/route-planner-map';
+import { KNOWN_BRANDS, normalizeBrand } from '@/utils/brands';
+import { toast } from '@/components/ui/toast';
 import type { SourcingTrip, TripStop, Store } from '@/types/database';
 import {
   ArrowLeft,
@@ -20,6 +24,8 @@ import {
   Search,
   Plus,
   Save,
+  Clock,
+  Route as RouteIcon,
 } from 'lucide-react';
 
 interface EditableStop {
@@ -78,9 +84,64 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
   const [searchResults, setSearchResults] = useState<FindResult[]>([]);
   const [addingId, setAddingId] = useState<string | null>(null);
 
+  // Manual add (same flow as Crear Ruta): store name + address with Google
+  // Places autocomplete, so you can add a store you know the address of
+  // without depending on the text search finding it.
+  const [manualName, setManualName] = useState('');
+  const [manualAddress, setManualAddress] = useState('');
+  const [manualPlace, setManualPlace] = useState<{
+    place_id: string;
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [addingManual, setAddingManual] = useState(false);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+
+  const [mapStats, setMapStats] = useState<RouteStats | null>(null);
+
   useEffect(() => {
     loadTrip();
   }, [id]);
+
+  // Attach Google Places autocomplete to the manual address field once the
+  // Maps JS bundle (loaded in the root layout) is available.
+  useEffect(() => {
+    if (loading || notEditable) return;
+    let cancelled = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let listener: any;
+
+    function tryInit() {
+      if (cancelled || !addressInputRef.current) return;
+      if (!window.google?.maps?.places) {
+        setTimeout(tryInit, 200);
+        return;
+      }
+
+      const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+        fields: ['place_id', 'formatted_address', 'geometry', 'name'],
+      });
+
+      listener = autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry?.location) return;
+        setManualAddress(place.formatted_address || '');
+        setManualPlace({
+          place_id: place.place_id || `manual-${Date.now()}`,
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        });
+        // Prefill the store name from the place when the user left it blank
+        setManualName((prev) => prev || place.name || '');
+      });
+    }
+
+    tryInit();
+    return () => {
+      cancelled = true;
+      if (listener) window.google?.maps?.event?.removeListener(listener);
+    };
+  }, [loading, notEditable]);
 
   async function loadTrip() {
     const supabase = createClient();
@@ -152,7 +213,11 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
         body: JSON.stringify({ query: searchQuery, lat: startLat, lng: startLng }),
       });
       const data = await response.json();
-      setSearchResults(data.results || []);
+      const results: FindResult[] = data.results || [];
+      setSearchResults(results);
+      if (results.length === 0) {
+        toast.info('No se encontraron tiendas. Prueba escribiendo la dirección arriba.');
+      }
     } finally {
       setSearching(false);
     }
@@ -168,6 +233,11 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
       });
       const data = await response.json();
       if (data.store_id) {
+        if (stops.some((s) => s.store_id === data.store_id)) {
+          toast.info('Esa tienda ya está en la ruta.');
+          return;
+        }
+        toast.success(`${result.name} agregada a la ruta`);
         setStops((prev) => [
           ...prev,
           {
@@ -185,6 +255,69 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
       }
     } finally {
       setAddingId(null);
+    }
+  }
+
+  // Adds a store typed by hand (name + address). Persists it first so it has a
+  // real store id to attach to the trip when you save.
+  async function addManualStore() {
+    if (!manualAddress.trim()) return;
+    if (!manualPlace) {
+      toast.error('Elige una dirección de la lista de sugerencias de Google.');
+      return;
+    }
+
+    const finalName = manualName.trim() || normalizeBrand(manualAddress) || manualAddress;
+
+    if (stops.some((s) => s.address === manualAddress)) {
+      toast.info('Esa tienda ya está en la ruta.');
+      return;
+    }
+
+    setAddingManual(true);
+    try {
+      const response = await fetch('/api/stores/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          google_place_id: manualPlace.place_id,
+          name: finalName,
+          address: manualAddress,
+          lat: manualPlace.lat,
+          lng: manualPlace.lng,
+        }),
+      });
+      const data = await response.json();
+      if (!data.store_id) {
+        toast.error('No se pudo guardar la tienda. Intenta de nuevo.');
+        return;
+      }
+
+      if (stops.some((s) => s.store_id === data.store_id)) {
+        toast.info('Esa tienda ya está en la ruta.');
+        return;
+      }
+
+      setStops((prev) => [
+        ...prev,
+        {
+          store_id: data.store_id,
+          name: finalName,
+          address: manualAddress,
+          lat: manualPlace.lat,
+          lng: manualPlace.lng,
+          score: 0,
+          planned_duration_minutes: defaultDuration,
+          original_order: null,
+        },
+      ]);
+      toast.success(`${finalName} agregada a la ruta`);
+      setManualName('');
+      setManualAddress('');
+      setManualPlace(null);
+      if (addressInputRef.current) addressInputRef.current.value = '';
+    } finally {
+      setAddingManual(false);
     }
   }
 
@@ -229,6 +362,9 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
           removedStoreIds.forEach((storeId) => next.delete(storeId));
           return next;
         });
+        toast.success('Paradas quitadas de la ruta');
+      } else {
+        toast.error('No se pudieron quitar las paradas');
       }
     } finally {
       setRemovingOnly(false);
@@ -268,7 +404,10 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
       });
 
       if (response.ok) {
+        toast.success('Ruta actualizada');
         router.push(`/trip/${id}`);
+      } else {
+        toast.error('No se pudo guardar la ruta. Intenta de nuevo.');
       }
     } finally {
       setSaving(false);
@@ -398,18 +537,127 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
 
         {/* Right column: stops list + add store */}
         <div className="space-y-4">
+          <Card padding={false} className="overflow-hidden">
+            <div className="p-4 pb-3">
+              <CardTitle>Mapa de la Ruta</CardTitle>
+              <p className="mt-0.5 text-xs text-text-muted">
+                Vista previa en vivo. Se actualiza al agregar, quitar o reordenar paradas.
+              </p>
+            </div>
+            <RoutePlannerMap
+              startLat={startLat}
+              startLng={startLng}
+              endLat={roundTrip ? startLat : endLat}
+              endLng={roundTrip ? startLng : endLng}
+              stops={stops.map((s) => ({
+                place_id: s.store_id,
+                name: s.name,
+                brand: normalizeBrand(s.name),
+                address: s.address,
+                lat: s.lat,
+                lng: s.lng,
+              }))}
+              onStats={setMapStats}
+            />
+            {mapStats && (
+              <div className="flex items-center gap-4 border-t border-border px-4 py-3 text-sm">
+                <span className="flex items-center gap-1.5 text-text-secondary">
+                  <RouteIcon size={15} className="text-primary" />
+                  <span className="tabular font-semibold text-text">
+                    {mapStats.distanceMiles}
+                  </span>{' '}
+                  mi
+                </span>
+                <span className="flex items-center gap-1.5 text-text-secondary">
+                  <Clock size={15} className="text-primary" />
+                  <span className="tabular font-semibold text-text">
+                    {Math.floor(mapStats.driveMinutes / 60)}h {mapStats.driveMinutes % 60}m
+                  </span>{' '}
+                  manejando
+                </span>
+              </div>
+            )}
+          </Card>
+
           <Card>
             <CardTitle>Agregar una Tienda</CardTitle>
-            <div className="mt-3 flex gap-2">
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Busca por nombre, ej: Ross Kissimmee"
-              />
-              <Button onClick={handleSearch} loading={searching} className="shrink-0 px-3">
-                <Search size={18} />
-              </Button>
+
+            <div className="mt-3 space-y-2.5">
+              <div>
+                <BrandCombobox
+                  label="Marca / Nombre de Tienda"
+                  brands={KNOWN_BRANDS}
+                  value={manualName}
+                  onChange={setManualName}
+                  onEnter={() => addressInputRef.current?.focus()}
+                  placeholder='Ej: "Ross", "Marshalls", "TJ Maxx"'
+                />
+                {manualName.trim() && (
+                  <p className="mt-1 text-xs text-text-muted">
+                    Marca:{' '}
+                    <span className="font-semibold text-primary">
+                      {normalizeBrand(manualName)}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    ref={addressInputRef}
+                    label="Dirección"
+                    value={manualAddress}
+                    onChange={(e) => {
+                      setManualAddress(e.target.value);
+                      setManualPlace(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addManualStore();
+                      }
+                    }}
+                    placeholder="Busca una dirección..."
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    onClick={addManualStore}
+                    loading={addingManual}
+                    disabled={!manualAddress.trim()}
+                    className="gap-1"
+                  >
+                    <Plus size={16} />
+                    Agregar
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="mb-2 text-xs font-medium text-text-muted">
+                ¿No sabes la dirección? Búscala por nombre
+              </p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    placeholder="Ej: Ross Kissimmee"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleSearch}
+                  loading={searching}
+                  className="shrink-0 px-3"
+                >
+                  <Search size={18} />
+                </Button>
+              </div>
             </div>
 
             {searchResults.length > 0 && (
