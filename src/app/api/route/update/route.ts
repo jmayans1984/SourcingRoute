@@ -14,6 +14,8 @@ interface UpdateRouteBody {
   end_address: string;
   end_lat: number;
   end_lng: number;
+  // Open-ended: no return leg — the route simply ends at the last stop.
+  open_ended?: boolean;
   avoid_tolls: boolean;
   avoid_highways: boolean;
   default_store_duration_minutes: number;
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
   const storeIds = body.stops.map((s) => s.store_id);
   const { data: storesData } = await supabase
     .from('stores')
-    .select('id, lat, lng')
+    .select('id, lat, lng, address')
     .in('id', storeIds);
 
   const storeMap = new Map((storesData || []).map((s) => [s.id, s]));
@@ -95,14 +97,23 @@ export async function POST(request: NextRequest) {
     scoreByStoreId.set(stop.store_id, scoreResult.total);
   }
 
-  const waypoints = orderedStops.map((s) => {
+  const allPoints = orderedStops.map((s) => {
     const store = storeMap.get(s.store_id)!;
     return { lat: store.lat, lng: store.lng };
   });
 
+  // Open-ended: the last stop is the destination and there is no return leg,
+  // so the remaining stops route toward it as intermediate waypoints.
+  const isOpenEnded = Boolean(body.open_ended);
+  const lastStore = storeMap.get(orderedStops[orderedStops.length - 1].store_id)!;
+  const waypoints = isOpenEnded ? allPoints.slice(0, -1) : allPoints;
+  const destination = isOpenEnded
+    ? allPoints[allPoints.length - 1]
+    : { lat: body.end_lat, lng: body.end_lng };
+
   const routeResult = await optimizeRoute(
     { lat: body.start_lat, lng: body.start_lng },
-    { lat: body.end_lat, lng: body.end_lng },
+    destination,
     waypoints,
     body.avoid_tolls,
     body.avoid_highways,
@@ -117,9 +128,9 @@ export async function POST(request: NextRequest) {
       start_address: body.start_address,
       start_lat: body.start_lat,
       start_lng: body.start_lng,
-      end_address: body.end_address,
-      end_lat: body.end_lat,
-      end_lng: body.end_lng,
+      end_address: isOpenEnded ? lastStore.address : body.end_address,
+      end_lat: isOpenEnded ? lastStore.lat : body.end_lat,
+      end_lng: isOpenEnded ? lastStore.lng : body.end_lng,
       avoid_tolls: body.avoid_tolls,
       avoid_highways: body.avoid_highways,
       default_store_duration_minutes: body.default_store_duration_minutes,

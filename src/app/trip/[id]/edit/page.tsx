@@ -70,7 +70,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
   const [endAddress, setEndAddress] = useState('');
   const [endLat, setEndLat] = useState<number | null>(null);
   const [endLng, setEndLng] = useState<number | null>(null);
-  const [roundTrip, setRoundTrip] = useState(true);
+  const [endMode, setEndMode] = useState<'return' | 'custom' | 'none'>('return');
   const [avoidTolls, setAvoidTolls] = useState(false);
   const [avoidHighways, setAvoidHighways] = useState(false);
   const [defaultDuration, setDefaultDuration] = useState(40);
@@ -176,13 +176,30 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
     setEndAddress(trip.end_address);
     setEndLat(trip.end_lat);
     setEndLng(trip.end_lng);
-    setRoundTrip(trip.start_address === trip.end_address);
     setAvoidTolls(trip.avoid_tolls);
     setAvoidHighways(trip.avoid_highways);
     setDefaultDuration(trip.default_store_duration_minutes);
 
     if (stopsData) {
       const typedStops = stopsData as (TripStop & { store: Store })[];
+
+      // Work out how the route currently ends. An open-ended route was saved
+      // with the last stop as its destination, so matching coordinates there
+      // means "sin destino" rather than a real custom endpoint.
+      const lastStop = typedStops[typedStops.length - 1];
+      const endsAtLastStop =
+        !!lastStop &&
+        trip.end_lat === lastStop.store.lat &&
+        trip.end_lng === lastStop.store.lng;
+
+      if (trip.start_address === trip.end_address) {
+        setEndMode('return');
+      } else if (endsAtLastStop) {
+        setEndMode('none');
+      } else {
+        setEndMode('custom');
+      }
+
       setStops(
         typedStops.map((s) => ({
           store_id: s.store.id,
@@ -375,9 +392,21 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
     if (stops.length === 0 || !startLat || !startLng) return;
     setSaving(true);
 
-    const finalEndAddress = roundTrip ? startAddress : endAddress;
-    const finalEndLat = roundTrip ? startLat : endLat;
-    const finalEndLng = roundTrip ? startLng : endLng;
+    if (endMode === 'custom' && (endLat == null || endLng == null)) {
+      toast.error('Elige una dirección válida para el punto final.');
+      setSaving(false);
+      return;
+    }
+
+    // Open-ended sends the last stop as the endpoint; the API resolves the real
+    // destination from the stop list either way.
+    const lastStop = stops[stops.length - 1];
+    const finalEndAddress =
+      endMode === 'return' ? startAddress : endMode === 'custom' ? endAddress : lastStop.address;
+    const finalEndLat =
+      endMode === 'return' ? startLat : endMode === 'custom' ? endLat : lastStop.lat;
+    const finalEndLng =
+      endMode === 'return' ? startLng : endMode === 'custom' ? endLng : lastStop.lng;
 
     try {
       const response = await fetch('/api/route/update', {
@@ -393,6 +422,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
           end_address: finalEndAddress,
           end_lat: finalEndLat,
           end_lng: finalEndLng,
+          open_ended: endMode === 'none',
           avoid_tolls: avoidTolls,
           avoid_highways: avoidHighways,
           default_store_duration_minutes: defaultDuration,
@@ -486,13 +516,40 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
                   if (lng != null) setStartLng(lng);
                 }}
               />
-              <Toggle
-                label="Volver al inicio"
-                description="Usar el punto de inicio como destino final"
-                checked={roundTrip}
-                onChange={setRoundTrip}
-              />
-              {!roundTrip && (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-text">
+                  Fin de la ruta
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: 'return', label: 'Volver al inicio', hint: 'Ida y vuelta' },
+                    { value: 'custom', label: 'Otro destino', hint: 'Punto final distinto' },
+                    { value: 'none', label: 'Sin destino', hint: 'Termina en la última tienda' },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setEndMode(opt.value)}
+                      className={`min-h-[60px] rounded-xl border p-2.5 text-center transition-colors ${
+                        endMode === opt.value
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-text-secondary hover:border-primary/40'
+                      }`}
+                    >
+                      <p className="text-xs font-semibold leading-tight">{opt.label}</p>
+                      <p className="mt-0.5 text-[10px] leading-tight text-text-muted">{opt.hint}</p>
+                    </button>
+                  ))}
+                </div>
+                {endMode === 'none' && (
+                  <p className="mt-2 text-xs text-text-muted">
+                    Ideal para viajes de varios días — no cuenta el regreso a casa ni suma
+                    distancia innecesaria.
+                  </p>
+                )}
+              </div>
+
+              {endMode === 'custom' && (
                 <LocationInput
                   label="Punto final"
                   value={endAddress}
@@ -501,6 +558,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
                     if (lat != null) setEndLat(lat);
                     if (lng != null) setEndLng(lng);
                   }}
+                  placeholder="Destino diferente"
                 />
               )}
             </div>
@@ -547,8 +605,9 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
             <RoutePlannerMap
               startLat={startLat}
               startLng={startLng}
-              endLat={roundTrip ? startLat : endLat}
-              endLng={roundTrip ? startLng : endLng}
+              endLat={endMode === 'return' ? startLat : endMode === 'custom' ? endLat : null}
+              endLng={endMode === 'return' ? startLng : endMode === 'custom' ? endLng : null}
+              openEnded={endMode === 'none'}
               stops={stops.map((s) => ({
                 place_id: s.store_id,
                 name: s.name,
