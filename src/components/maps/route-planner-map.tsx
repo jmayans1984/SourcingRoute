@@ -53,6 +53,10 @@ export function RoutePlannerMap({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fallbackLine = useRef<any>(null);
   const [ready, setReady] = useState(false);
+  // Signature of the directions request already drawn (or in flight). Guards
+  // against ever asking Google for the exact same route twice — a render loop
+  // upstream would otherwise burn quota and make the map flicker.
+  const lastRequestKey = useRef<string | null>(null);
 
   const onStatsRef = useRef(onStats);
   onStatsRef.current = onStats;
@@ -107,6 +111,16 @@ export function RoutePlannerMap({
   // Redraw markers + route whenever inputs change
   useEffect(() => {
     if (!ready || !map.current) return;
+
+    // Nothing about the drawing changed — bail before clearing anything, so a
+    // render loop upstream can never re-request directions or make the already
+    // drawn route blink out and back in.
+    const drawKey = JSON.stringify([
+      startLat, startLng, endLat, endLng, openEnded, optimizeOrder, stopsKey,
+    ]);
+    if (drawKey === lastRequestKey.current) return;
+    lastRequestKey.current = drawKey;
+
     const google = window.google;
 
     // Clear old markers
