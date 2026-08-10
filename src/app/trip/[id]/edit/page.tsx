@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, use } from 'react';
+import { useEffect, useMemo, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
@@ -98,6 +98,20 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
   const addressInputRef = useRef<HTMLInputElement>(null);
 
   const [mapStats, setMapStats] = useState<RouteStats | null>(null);
+
+  // Stable reference so the map only redraws when the stops actually change.
+  const mapStops = useMemo(
+    () =>
+      stops.map((s) => ({
+        place_id: s.store_id,
+        name: s.name,
+        brand: normalizeBrand(s.name),
+        address: s.address,
+        lat: s.lat,
+        lng: s.lng,
+      })),
+    [stops]
+  );
 
   useEffect(() => {
     loadTrip();
@@ -608,14 +622,7 @@ export default function EditRoutePage({ params }: { params: Promise<{ id: string
               endLat={endMode === 'return' ? startLat : endMode === 'custom' ? endLat : null}
               endLng={endMode === 'return' ? startLng : endMode === 'custom' ? endLng : null}
               openEnded={endMode === 'none'}
-              stops={stops.map((s) => ({
-                place_id: s.store_id,
-                name: s.name,
-                brand: normalizeBrand(s.name),
-                address: s.address,
-                lat: s.lat,
-                lng: s.lng,
-              }))}
+              stops={mapStops}
               onStats={setMapStats}
             />
             {mapStats && (

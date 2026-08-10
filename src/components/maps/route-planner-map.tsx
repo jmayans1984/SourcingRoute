@@ -57,6 +57,14 @@ export function RoutePlannerMap({
   const onStatsRef = useRef(onStats);
   onStatsRef.current = onStats;
 
+  // Redraw off the stops' *contents*, not the array identity. A caller that
+  // builds the array inline (`stops.map(...)`) hands us a new reference on
+  // every render, which would otherwise re-request directions in a loop —
+  // each response updates stats, which re-renders, which rebuilds the array.
+  const stopsKey = stops.map((s) => `${s.lat},${s.lng},${s.name}`).join('|');
+  const stopsRef = useRef(stops);
+  stopsRef.current = stops;
+
   // Init map once Google Maps JS is available
   useEffect(() => {
     let cancelled = false;
@@ -106,7 +114,7 @@ export function RoutePlannerMap({
     markers.current = [];
 
     // Only stops with real coordinates can be plotted / routed
-    const validStops = stops.filter((s) => s.lat !== 0 || s.lng !== 0);
+    const validStops = stopsRef.current.filter((s) => s.lat !== 0 || s.lng !== 0);
 
     const points: { lat: number; lng: number }[] = [];
 
@@ -244,7 +252,7 @@ export function RoutePlannerMap({
       }
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, startLat, startLng, endLat, endLng, stops, optimizeOrder]);
+  }, [ready, startLat, startLng, endLat, endLng, stopsKey, openEnded, optimizeOrder]);
 
   return (
     <div
