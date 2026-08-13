@@ -25,7 +25,7 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
-      <div className="mx-auto flex h-14 max-w-lg items-center gap-2 px-4 md:h-auto md:max-w-none md:px-0 md:pb-5 md:pt-1">
+      <div className="mx-auto flex h-[60px] max-w-lg items-center gap-2 px-4 md:h-auto md:max-w-none md:px-0 md:pb-5 md:pt-1">
         {showBack && (
           <button
             onClick={() => router.back()}

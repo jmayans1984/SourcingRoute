@@ -148,12 +148,12 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
 
       <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
         {/* Completion banner */}
-        <Card className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-success/10">
+        <Card className="bg-text text-center text-surface">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-white/10">
             <Trophy size={24} className="text-success" />
           </div>
-          <h2 className="mt-3 text-xl font-bold tracking-tight">¡Día de sourcing completado!</h2>
-          <p className="mt-1 text-sm text-text-muted">
+          <h2 className="mt-3 text-xl font-semibold">¡Día de sourcing completado!</h2>
+          <p className="mt-1 text-sm text-surface/70">
             {new Date(trip.trip_date).toLocaleDateString('es-CO', {
               weekday: 'long',
               month: 'long',
@@ -163,26 +163,26 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
         </Card>
 
         {/* Key metrics */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <Card className="text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
               <MapPin size={17} />
             </span>
-            <p className="mt-2 text-2xl font-bold tabular">{visitedStops.length}</p>
+            <p className="mt-2 text-xl font-semibold tabular">{visitedStops.length}</p>
             <p className="text-[11px] text-text-muted">Tiendas</p>
           </Card>
           <Card className="text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-info/10 text-info">
               <Package size={17} />
             </span>
-            <p className="mt-2 text-2xl font-bold tabular">{totalItemsBought}</p>
+            <p className="mt-2 text-xl font-semibold tabular">{totalItemsBought}</p>
             <p className="text-[11px] text-text-muted">Artículos</p>
           </Card>
           <Card className="text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-warning/10 text-warning">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-warning/10 text-warning">
               <DollarSign size={17} />
             </span>
-            <p className="mt-2 text-2xl font-bold tabular">${totalSpent.toFixed(0)}</p>
+            <p className="mt-2 text-xl font-semibold tabular">${totalSpent.toFixed(0)}</p>
             <p className="text-[11px] text-text-muted">Gastado</p>
           </Card>
         </div>

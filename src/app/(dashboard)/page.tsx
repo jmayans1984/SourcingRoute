@@ -19,9 +19,6 @@ import {
   Eye,
   Pencil,
   Trash2,
-  ArrowUp,
-  ArrowDown,
-  Wallet,
   Clock,
   ChevronRight,
   Search,
@@ -83,59 +80,6 @@ function getPeriodStart(period: PeriodFilter): Date | null {
   if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1);
   if (period === 'year') return new Date(now.getFullYear(), 0, 1);
   return null;
-}
-
-function getPreviousPeriodStart(period: PeriodFilter): { start: Date; end: Date } | null {
-  const now = new Date();
-  if (period === 'week') {
-    const currentStart = getStartOfWeek();
-    const prevEnd = new Date(currentStart);
-    prevEnd.setDate(prevEnd.getDate() - 1);
-    prevEnd.setHours(23, 59, 59, 999);
-    const prevStart = new Date(prevEnd);
-    prevStart.setDate(prevStart.getDate() - 6);
-    prevStart.setHours(0, 0, 0, 0);
-    return { start: prevStart, end: prevEnd };
-  }
-  if (period === 'month') {
-    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-    prevMonthEnd.setHours(23, 59, 59, 999);
-    return { start: prevMonthStart, end: prevMonthEnd };
-  }
-  if (period === 'year') {
-    const prevYearStart = new Date(now.getFullYear() - 1, 0, 1);
-    const prevYearEnd = new Date(now.getFullYear() - 1, 11, 31);
-    prevYearEnd.setHours(23, 59, 59, 999);
-    return { start: prevYearStart, end: prevYearEnd };
-  }
-  return null;
-}
-
-// Delta chip: green when improving, amber when declining
-function DeltaPill({
-  current,
-  prev,
-  invert = false,
-}: {
-  current: number;
-  prev: number;
-  invert?: boolean;
-}) {
-  if (prev <= 0) return null;
-  const up = current >= prev;
-  const good = invert ? !up : up;
-  const pct = Math.abs(Math.round(((current - prev) / prev) * 100));
-  return (
-    <span
-      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular ${
-        good ? 'bg-success/12 text-success' : 'bg-warning/12 text-warning'
-      }`}
-    >
-      {up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
-      {pct}%
-    </span>
-  );
 }
 
 export default function DashboardPage() {
@@ -311,36 +255,6 @@ export default function DashboardPage() {
   const filteredAvgCost =
     filteredTotalItems > 0 ? filteredTotalSpent / filteredTotalItems : 0;
 
-  // Previous period comparison
-  const prevPeriod = getPreviousPeriodStart(period);
-  let prevTotalSpent = 0;
-  let prevTotalItems = 0;
-  let prevTotalStores = 0;
-  let prevTotalProfit = 0;
-
-  if (prevPeriod && period !== 'all') {
-    const prevTrips = trips.filter((t) => {
-      const tripDate = new Date(t.trip_date);
-      return tripDate >= prevPeriod.start && tripDate <= prevPeriod.end;
-    });
-    const prevLooseVisits = looseVisits.filter((v) => {
-      const visitDate = new Date(v.visitedAt);
-      return visitDate >= prevPeriod.start && visitDate <= prevPeriod.end;
-    });
-    prevTotalSpent =
-      prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.spent || 0), 0) +
-      prevLooseVisits.reduce((sum, v) => sum + v.spent, 0);
-    prevTotalItems =
-      prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.itemsBought || 0), 0) +
-      prevLooseVisits.reduce((sum, v) => sum + v.itemsBought, 0);
-    prevTotalStores =
-      prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.storesVisited || 0), 0) +
-      prevLooseVisits.length;
-    prevTotalProfit =
-      prevTrips.reduce((sum, t) => sum + (tripTotals[t.id]?.profit || 0), 0) +
-      prevLooseVisits.reduce((sum, v) => sum + v.profit, 0);
-  }
-
   // Averages track completed work as you go: a route counts as soon as it has
   // at least one completed store, and routes not started yet don't dilute it.
   const routesWithProgress = periodTrips.filter(
@@ -356,54 +270,8 @@ export default function DashboardPage() {
     day: 'numeric',
     month: 'long',
   });
-
-  const kpis = [
-    {
-      label: 'Tiendas',
-      value: `${filteredTotalStores}`,
-      icon: Store,
-      tone: 'bg-primary/10 text-primary',
-      cur: filteredTotalStores,
-      prev: prevTotalStores,
-      prevLabel: prevTotalStores > 0 ? `vs ${prevTotalStores} antes` : null,
-      invert: false,
-      accent: '',
-    },
-    {
-      label: 'Utilidad',
-      value: `$${Math.round(filteredTotalProfit).toLocaleString()}`,
-      icon: TrendingUp,
-      tone: 'bg-success/10 text-success',
-      cur: filteredTotalProfit,
-      prev: prevTotalProfit,
-      prevLabel:
-        prevTotalProfit > 0 ? `vs $${Math.round(prevTotalProfit).toLocaleString()} antes` : null,
-      invert: false,
-      accent: filteredTotalProfit >= 0 ? 'text-success' : 'text-danger',
-    },
-    {
-      label: 'Artículos',
-      value: `${filteredTotalItems}`,
-      icon: Package,
-      tone: 'bg-info/10 text-info',
-      cur: filteredTotalItems,
-      prev: prevTotalItems,
-      prevLabel: prevTotalItems > 0 ? `vs ${prevTotalItems} antes` : null,
-      invert: false,
-      accent: '',
-    },
-    {
-      label: 'Gastado',
-      value: `$${filteredTotalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
-      icon: Wallet,
-      tone: 'bg-warning/10 text-warning',
-      cur: filteredTotalSpent,
-      prev: prevTotalSpent,
-      prevLabel: prevTotalSpent > 0 ? `vs $${prevTotalSpent.toLocaleString()} antes` : null,
-      invert: true,
-      accent: '',
-    },
-  ];
+  const dashboardRoi =
+    filteredTotalSpent > 0 ? Math.round((filteredTotalProfit / filteredTotalSpent) * 100) : 0;
 
   const secondary = [
     {
@@ -446,31 +314,56 @@ export default function DashboardPage() {
       <Header title="Inicio" subtitle={today} />
 
       <div className="space-y-6 p-4 md:p-0">
-        {/* Greeting + primary action */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold md:text-2xl">
-              Hola, {userName}
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">Resumen de tu actividad de sourcing.</p>
+        <Card className="bg-text text-surface">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-surface/65">Hola, {userName}</p>
+              <h2 className="mt-2 text-4xl font-semibold leading-none tabular">
+                ${Math.round(filteredTotalProfit).toLocaleString()}
+              </h2>
+              <p className="mt-2 text-sm text-surface/70">
+                Utilidad en {PERIOD_LONG[period].toLowerCase()}
+              </p>
+            </div>
+            <div className="rounded-lg bg-white/10 px-3 py-2 text-right">
+              <p className="text-[11px] text-surface/60">ROI</p>
+              <p className="text-lg font-semibold tabular">{dashboardRoi}%</p>
+            </div>
           </div>
-          <div className="flex shrink-0 gap-2">
-            <Link href="/visit/new" className="flex-1 md:flex-none">
-              <Button size="lg" variant="outline" fullWidth className="gap-2 md:w-auto">
-                <Store size={19} />
-                Visita Suelta
-              </Button>
-            </Link>
-            <Link href="/route/create" className="flex-1 md:flex-none">
-              <Button size="lg" fullWidth className="gap-2 md:w-auto">
-                <Route size={19} />
-                Crear Ruta
-              </Button>
-            </Link>
+
+          <div className="mt-5 grid grid-cols-3 divide-x divide-white/15 rounded-lg bg-white/10">
+            <div className="p-3">
+              <p className="text-[11px] text-surface/60">Gastado</p>
+              <p className="text-sm font-semibold tabular">
+                ${filteredTotalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+            <div className="p-3">
+              <p className="text-[11px] text-surface/60">Tiendas</p>
+              <p className="text-sm font-semibold tabular">{filteredTotalStores}</p>
+            </div>
+            <div className="p-3">
+              <p className="text-[11px] text-surface/60">Articulos</p>
+              <p className="text-sm font-semibold tabular">{filteredTotalItems}</p>
+            </div>
           </div>
+        </Card>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Link href="/route/create">
+            <Button size="lg" fullWidth className="gap-2">
+              <Route size={19} />
+              Crear Ruta
+            </Button>
+          </Link>
+          <Link href="/visit/new">
+            <Button size="lg" variant="outline" fullWidth className="gap-2">
+              <Store size={19} />
+              Visita Suelta
+            </Button>
+          </Link>
         </div>
 
-        {/* Period selector */}
         <div className="inline-flex w-full gap-1 rounded-lg bg-surface-secondary p-1 md:w-auto">
           {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
             <button
@@ -487,28 +380,6 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* KPI cards */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {kpis.map((k) => (
-            <Card key={k.label}>
-              <div className="flex items-start justify-between gap-2">
-                <span className={`flex h-8 w-8 items-center justify-center rounded-md ${k.tone}`}>
-                  <k.icon size={16} />
-                </span>
-                <DeltaPill current={k.cur} prev={k.prev} invert={k.invert} />
-              </div>
-              <p className="mt-3 text-xs font-medium text-text-secondary">{k.label}</p>
-              <p className={`text-2xl font-semibold tabular ${k.accent || 'text-text'}`}>
-                {k.value}
-              </p>
-              <p className="mt-0.5 text-[11px] text-text-muted">
-                {k.prevLabel ?? PERIOD_LONG[period]}
-              </p>
-            </Card>
-          ))}
-        </div>
-
-        {/* Secondary metrics */}
         <Card padding={false}>
           <div className="grid grid-cols-2 divide-x-0 divide-y divide-border md:grid-cols-4 md:divide-x md:divide-y-0">
             {secondary.map((s) => (

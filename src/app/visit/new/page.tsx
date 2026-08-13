@@ -456,16 +456,16 @@ export default function NewQuickVisitPage() {
         </Card>
 
         {/* Live totals summary */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <Card className="text-center">
             <p className="text-[11px] text-text-muted">Gastado</p>
-            <p className="mt-0.5 text-lg font-bold tabular">
+            <p className="mt-0.5 text-lg font-semibold tabular">
               ${totalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
           </Card>
           <Card className="text-center">
             <p className="text-[11px] text-text-muted">Venta Proy.</p>
-            <p className="mt-0.5 text-lg font-bold tabular">
+            <p className="mt-0.5 text-lg font-semibold tabular">
               ${projectedSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
           </Card>
@@ -474,7 +474,7 @@ export default function NewQuickVisitPage() {
               Utilidad{liveROI !== 0 ? ` · ${liveROI}%` : ''}
             </p>
             <p
-              className={`mt-0.5 text-lg font-bold tabular ${projectedProfit >= 0 ? 'text-success' : 'text-danger'}`}
+              className={`mt-0.5 text-lg font-semibold tabular ${projectedProfit >= 0 ? 'text-success' : 'text-danger'}`}
             >
               ${projectedProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
@@ -494,10 +494,10 @@ export default function NewQuickVisitPage() {
             type="button"
             onClick={importFromSheets}
             disabled={importing}
-            className="mt-3 flex w-full items-center justify-between gap-3 rounded-xl border border-success/30 bg-success/[0.06] px-4 py-3 text-left transition-colors hover:bg-success/10 disabled:opacity-60"
+            className="mt-3 flex w-full items-center justify-between gap-3 rounded-lg border border-success/30 bg-success/[0.06] px-4 py-3 text-left transition-colors hover:bg-success/10 disabled:opacity-60"
           >
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-success/15 text-success">
+              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-success/15 text-success">
                 {importing ? (
                   <Loader2 size={18} className="animate-spin" />
                 ) : (
@@ -514,7 +514,7 @@ export default function NewQuickVisitPage() {
           </button>
 
           {importResult && (
-            <p className="mt-2.5 rounded-xl bg-success/10 px-3 py-2 text-xs text-success">
+            <p className="mt-2.5 rounded-lg bg-success/10 px-3 py-2 text-xs text-success">
               ✓ {importResult.rowCount} producto{importResult.rowCount !== 1 ? 's' : ''} importado
               {importResult.rowCount !== 1 ? 's' : ''} · hoja limpiada
             </p>
@@ -588,7 +588,7 @@ export default function NewQuickVisitPage() {
                   key={r}
                   type="button"
                   onClick={() => setRating(r)}
-                  className={`min-h-[76px] rounded-xl border-2 py-3 text-center text-sm font-semibold transition-colors ${
+                  className={`min-h-[76px] rounded-lg border py-3 text-center text-sm font-semibold transition-colors ${
                     selected ? sel : 'border-border text-text-secondary hover:border-primary/40'
                   }`}
                 >

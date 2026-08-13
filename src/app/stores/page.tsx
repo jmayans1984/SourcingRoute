@@ -17,7 +17,6 @@ import {
   Heart,
   Plus,
   Store as StoreIcon,
-  DollarSign,
   Tag,
   Award,
   Search,
@@ -206,8 +205,9 @@ export default function StoresPage() {
 
   // Aggregate stats for the summary row
   const totalVisits = stores.reduce((s, x) => s + x.visitCount, 0);
-  const totalItemsAll = stores.reduce((s, x) => s + x.itemsBought, 0);
   const totalSpentAll = stores.reduce((s, x) => s + x.totalSpent, 0);
+  const avgProfitAll =
+    stores.length > 0 ? stores.reduce((s, x) => s + x.avgProfit, 0) / stores.length : 0;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -261,8 +261,8 @@ export default function StoresPage() {
             <p className="mt-0.5 text-xl font-semibold tabular">{stores.length}</p>
           </div>
             <div className="p-4 text-center">
-            <p className="text-[11px] text-text-muted">Artículos</p>
-            <p className="mt-0.5 text-xl font-semibold tabular">{totalItemsAll}</p>
+            <p className="text-[11px] text-text-muted">Utilidad prom.</p>
+            <p className="mt-0.5 text-xl font-semibold tabular">${avgProfitAll.toFixed(0)}</p>
           </div>
             <div className="p-4 text-center">
             <p className="text-[11px] text-text-muted">Gastado</p>
@@ -514,11 +514,11 @@ export default function StoresPage() {
                 </p>
               </Card>
             ) : (
-              <div className="space-y-2.5 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:grid-cols-3">
+              <div className="space-y-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:grid-cols-3">
                 {filtered.map((item) => (
                   <Link key={item.store.id} href={`/stores/${item.store.id}`}>
-                    <Card className="flex items-center gap-3 transition-colors hover:bg-surface-secondary">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-base font-bold text-primary">
+                    <Card className="flex items-center gap-3 transition-colors active:bg-surface-hover hover:bg-surface-secondary">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary text-sm font-semibold text-text-secondary">
                         {item.store.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -529,18 +529,22 @@ export default function StoresPage() {
                           )}
                         </div>
                         <p className="truncate text-xs text-text-muted">{item.store.address}</p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                          <span className="inline-flex items-center gap-1 rounded-md bg-surface-secondary px-1.5 py-0.5 text-text-secondary tabular">
-                            <StoreIcon size={11} />
-                            {item.visitCount}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-md bg-success/10 px-1.5 py-0.5 font-medium text-success tabular">
-                            <DollarSign size={11} />~{item.avgProfit.toFixed(0)}/v
-                          </span>
+                        <div className="mt-1.5 flex items-center gap-2 text-xs text-text-muted">
+                          <span className="tabular">{item.visitCount} visitas</span>
                           {item.avgRating && (
                             <RatingBadge rating={Math.round(item.avgRating) as StoreRating} />
                           )}
                         </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p
+                          className={`text-sm font-semibold tabular ${
+                            item.avgProfit >= 0 ? 'text-success' : 'text-danger'
+                          }`}
+                        >
+                          ${item.avgProfit.toFixed(0)}
+                        </p>
+                        <p className="text-[11px] text-text-muted">prom.</p>
                       </div>
                       <ChevronRight size={17} className="shrink-0 text-text-muted" />
                     </Card>

@@ -25,11 +25,11 @@ export function Collapsible({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-surface-secondary"
+        className="flex w-full items-center gap-3 p-4 text-left transition-colors active:bg-surface-secondary hover:bg-surface-secondary"
       >
         {icon}
         <div className="min-w-0 flex-1">
-          <p className="text-base font-semibold text-text">{title}</p>
+          <p className="text-sm font-semibold text-text">{title}</p>
           {summary && <p className="truncate text-xs text-text-muted">{summary}</p>}
         </div>
         <ChevronDown

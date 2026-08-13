@@ -15,8 +15,8 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface/95 backdrop-blur-md safe-bottom md:hidden">
-      <div className="mx-auto flex max-w-lg items-stretch justify-around px-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface/95 shadow-soft-lg backdrop-blur-md safe-bottom md:hidden">
+      <div className="mx-auto grid max-w-lg grid-cols-4 px-1.5 py-1">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
@@ -26,8 +26,8 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium transition-colors ${
-                isActive ? 'text-text' : 'text-text-muted active:bg-surface-secondary'
+              className={`relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium transition-colors ${
+                isActive ? 'bg-surface-secondary text-text' : 'text-text-muted active:bg-surface-secondary'
               }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.4 : 1.9} />

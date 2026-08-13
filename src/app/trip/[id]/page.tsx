@@ -523,55 +523,55 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
 
       <div className="space-y-4 p-4 md:p-0">
         {/* Progress */}
-        <Card>
+        <Card className="bg-text text-surface">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <TripStatusBadge status={trip.status} />
-              <span className="text-sm font-semibold tabular">
+              <span className="text-sm font-semibold text-surface/75 tabular">
                 {completedStops}/{stops.length} tiendas
               </span>
             </div>
-            <Button size="sm" variant="outline" onClick={openProducts} className="gap-1.5">
+            <Button size="sm" variant="outline" onClick={openProducts} className="gap-1.5 border-white/20 bg-white/10 text-surface hover:bg-white/15">
               <ShoppingBag size={15} />
               Productos
             </Button>
           </div>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-secondary">
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/15">
             <div
-              className={`h-full rounded-full ${allDone ? 'bg-success' : 'bg-primary'}`}
+              className={`h-full rounded-full ${allDone ? 'bg-success' : 'bg-primary-light'}`}
               style={{ width: `${progressPct}%` }}
             />
           </div>
         </Card>
 
         {/* Money KPIs */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <Card className="text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-info/10 text-info">
               <Package size={17} />
             </span>
-            <p className="mt-2 text-lg font-bold tabular">{totalItemsBought}</p>
+            <p className="mt-2 text-lg font-semibold tabular">{totalItemsBought}</p>
             <p className="text-[11px] text-text-muted">Artículos</p>
           </Card>
           <Card className="text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-warning/10 text-warning">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-warning/10 text-warning">
               <DollarSign size={17} />
             </span>
-            <p className="mt-2 text-lg font-bold tabular">
+            <p className="mt-2 text-lg font-semibold tabular">
               ${totalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
             <p className="text-[11px] text-text-muted">Gastado</p>
           </Card>
           <Card className="text-center">
             <span
-              className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg ${
+              className={`mx-auto flex h-8 w-8 items-center justify-center rounded-md ${
                 realProfit >= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
               }`}
             >
               <TrendingUp size={17} />
             </span>
             <p
-              className={`mt-2 text-lg font-bold tabular ${realProfit >= 0 ? 'text-success' : 'text-danger'}`}
+              className={`mt-2 text-lg font-semibold tabular ${realProfit >= 0 ? 'text-success' : 'text-danger'}`}
             >
               ${realProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>

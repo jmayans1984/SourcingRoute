@@ -140,25 +140,25 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
 
       <div className="space-y-4 p-4 md:p-0">
         {/* Store summary */}
-        <Card>
+        <Card className="bg-text text-surface">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg font-bold text-primary">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/10 text-lg font-semibold text-surface">
                 {store.name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-semibold">{store.name}</h2>
-                <p className="text-sm text-text-secondary">{store.chain}</p>
+                <p className="text-sm text-surface/70">{store.chain}</p>
               </div>
             </div>
             <a href={buildWazeUrl(store.lat, store.lng)} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" className="shrink-0 gap-1.5">
+              <Button size="sm" variant="outline" className="shrink-0 gap-1.5 border-white/20 bg-white/10 text-surface hover:bg-white/15">
                 <Navigation size={15} />
                 Ir
               </Button>
             </a>
           </div>
-          <p className="mt-3 text-sm text-text-muted">{store.address}</p>
+          <p className="mt-3 text-sm text-surface/70">{store.address}</p>
           {latestSignal && (
             <div className="mt-2.5">
               <WifiBadge signal={latestSignal} />
@@ -167,28 +167,28 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
         </Card>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <Card className="text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-warning/10 text-warning">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-warning/10 text-warning">
               <Star size={17} />
             </span>
-            <p className="mt-2 text-lg font-bold tabular">
+            <p className="mt-2 text-lg font-semibold tabular">
               {avgRating ? avgRating.toFixed(1) : '--'}
             </p>
             <p className="text-[11px] text-text-muted">Calificación</p>
           </Card>
           <Card className="text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-success/10 text-success">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-success/10 text-success">
               <DollarSign size={17} />
             </span>
-            <p className="mt-2 text-lg font-bold tabular">${avgProfit.toFixed(0)}</p>
+            <p className="mt-2 text-lg font-semibold tabular">${avgProfit.toFixed(0)}</p>
             <p className="text-[11px] text-text-muted">Utilidad prom.</p>
           </Card>
           <Card className="text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-info/10 text-info">
               <Package size={17} />
             </span>
-            <p className="mt-2 text-lg font-bold tabular">{totalProducts}</p>
+            <p className="mt-2 text-lg font-semibold tabular">{totalProducts}</p>
             <p className="text-[11px] text-text-muted">Productos</p>
           </Card>
         </div>

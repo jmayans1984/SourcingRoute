@@ -37,19 +37,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-6 py-12">
+    <div className="flex min-h-full flex-col justify-center bg-bg px-6 py-12">
       <div className="w-full max-w-sm">
-        <div className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-soft">
+        <div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-text text-surface">
             <Route size={26} />
           </div>
-          <h1 className="mt-4 text-2xl font-bold tracking-tight">SourcingRoute</h1>
+          <h1 className="mt-5 text-3xl font-semibold">SourcingRoute</h1>
           <p className="mt-1.5 text-sm text-text-secondary">
             Ingresa para planear tu día de sourcing
           </p>
         </div>
 
-        <div className="mt-7 rounded-2xl border border-border bg-surface p-6 shadow-soft">
+        <div className="mt-8 rounded-lg border border-border bg-surface p-5">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Correo"
@@ -71,7 +71,7 @@ export default function LoginPage() {
             />
 
             {error && (
-              <p className="rounded-xl bg-danger/10 px-3 py-2.5 text-sm text-danger">{error}</p>
+              <p className="rounded-lg bg-danger/10 px-3 py-2.5 text-sm text-danger">{error}</p>
             )}
 
             <Button type="submit" fullWidth size="lg" loading={loading}>
@@ -80,7 +80,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-sm text-text-secondary">
+        <p className="mt-6 text-sm text-text-secondary">
           ¿No tienes cuenta?{' '}
           <Link href="/register" className="font-semibold text-primary hover:underline">
             Regístrate
