@@ -148,12 +148,12 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
 
       <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
         {/* Completion banner */}
-        <Card className="bg-text text-center text-surface">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-white/10">
+        <Card className="border-success/20 bg-success/10 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-surface">
             <Trophy size={24} className="text-success" />
           </div>
           <h2 className="mt-3 text-xl font-semibold">¡Día de sourcing completado!</h2>
-          <p className="mt-1 text-sm text-surface/70">
+          <p className="mt-1 text-sm text-text-secondary">
             {new Date(trip.trip_date).toLocaleDateString('es-CO', {
               weekday: 'long',
               month: 'long',

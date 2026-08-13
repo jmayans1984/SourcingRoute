@@ -197,7 +197,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
                   <ChevronDown size={16} />
                 </button>
               </div>
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-text text-xs font-semibold text-surface">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-semibold text-white">
                 {index + 1}
               </div>
               <div className="min-w-0 flex-1">

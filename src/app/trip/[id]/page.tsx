@@ -523,20 +523,20 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
 
       <div className="space-y-4 p-4 md:p-0">
         {/* Progress */}
-        <Card className="bg-text text-surface">
+        <Card className="border-primary/20 bg-primary/10">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <TripStatusBadge status={trip.status} />
-              <span className="text-sm font-semibold text-surface/75 tabular">
+              <span className="text-sm font-semibold text-text-secondary tabular">
                 {completedStops}/{stops.length} tiendas
               </span>
             </div>
-            <Button size="sm" variant="outline" onClick={openProducts} className="gap-1.5 border-white/20 bg-white/10 text-surface hover:bg-white/15">
+            <Button size="sm" variant="outline" onClick={openProducts} className="gap-1.5 bg-surface">
               <ShoppingBag size={15} />
               Productos
             </Button>
           </div>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/15">
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface">
             <div
               className={`h-full rounded-full ${allDone ? 'bg-success' : 'bg-primary-light'}`}
               style={{ width: `${progressPct}%` }}

@@ -9,44 +9,44 @@
    hex), so a single definition here flips the whole UI between light and dark.
    --------------------------------------------------------------------------- */
 :root {
-  --bg: #f4f5f3;
+  --bg: #f7fbff;
   --surface: #ffffff;
-  --surface-secondary: #eef1ee;
-  --surface-hover: #e6ebe7;
-  --border: #dfe5df;
-  --border-strong: #c7d1c9;
+  --surface-secondary: #eef6fb;
+  --surface-hover: #e3f0f8;
+  --border: #d8e8f2;
+  --border-strong: #bdd4e4;
 
-  --text: #171b18;
-  --text-secondary: #5c665f;
-  --text-muted: #8b948d;
+  --text: #172033;
+  --text-secondary: #52627a;
+  --text-muted: #8290a3;
 
-  --primary: #1f5d50;
-  --primary-dark: #17483e;
-  --primary-light: #3c7f71;
+  --primary: #2478b7;
+  --primary-dark: #185f94;
+  --primary-light: #4aa3df;
 
-  --success: #16825b;
-  --warning: #b86b18;
-  --danger: #dc2626;
-  --info: #3b6f91;
+  --success: #16a36d;
+  --warning: #f59e0b;
+  --danger: #e05252;
+  --info: #6d5dfc;
 
   --shadow-color: 220 18% 60%;
 }
 
 [data-theme="dark"] {
-  --bg: #111411;
-  --surface: #181d19;
-  --surface-secondary: #202720;
-  --surface-hover: #293129;
-  --border: #2d352e;
-  --border-strong: #3d493f;
+  --bg: #eef5fb;
+  --surface: #ffffff;
+  --surface-secondary: #e4eef7;
+  --surface-hover: #d9e8f3;
+  --border: #c9ddeb;
+  --border-strong: #abc5d8;
 
-  --text: #eef3ef;
-  --text-secondary: #a7b2aa;
-  --text-muted: #768279;
+  --text: #172033;
+  --text-secondary: #52627a;
+  --text-muted: #8290a3;
 
-  --primary: #7cc9b7;
-  --primary-dark: #63b5a2;
-  --primary-light: #a4dece;
+  --primary: #2478b7;
+  --primary-dark: #185f94;
+  --primary-light: #4aa3df;
 
   --success: #34d399;
   --warning: #fbbf24;

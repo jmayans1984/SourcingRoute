@@ -40,7 +40,7 @@ export default function LoginPage() {
     <div className="flex min-h-full flex-col justify-center bg-bg px-6 py-12">
       <div className="w-full max-w-sm">
         <div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-text text-surface">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-white">
             <Route size={26} />
           </div>
           <h1 className="mt-5 text-3xl font-semibold">SourcingRoute</h1>

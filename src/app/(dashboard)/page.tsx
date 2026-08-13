@@ -314,36 +314,36 @@ export default function DashboardPage() {
       <Header title="Inicio" subtitle={today} />
 
       <div className="space-y-6 p-4 md:p-0">
-        <Card className="bg-text text-surface">
+        <Card className="border-primary/20 bg-primary/10">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-surface/65">Hola, {userName}</p>
+              <p className="text-xs font-medium text-primary">Hola, {userName}</p>
               <h2 className="mt-2 text-4xl font-semibold leading-none tabular">
                 ${Math.round(filteredTotalProfit).toLocaleString()}
               </h2>
-              <p className="mt-2 text-sm text-surface/70">
+              <p className="mt-2 text-sm text-text-secondary">
                 Utilidad en {PERIOD_LONG[period].toLowerCase()}
               </p>
             </div>
-            <div className="rounded-lg bg-white/10 px-3 py-2 text-right">
-              <p className="text-[11px] text-surface/60">ROI</p>
+            <div className="rounded-lg bg-surface px-3 py-2 text-right">
+              <p className="text-[11px] text-text-muted">ROI</p>
               <p className="text-lg font-semibold tabular">{dashboardRoi}%</p>
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 divide-x divide-white/15 rounded-lg bg-white/10">
+          <div className="mt-5 grid grid-cols-3 divide-x divide-primary/15 rounded-lg bg-surface/80">
             <div className="p-3">
-              <p className="text-[11px] text-surface/60">Gastado</p>
+              <p className="text-[11px] text-text-muted">Gastado</p>
               <p className="text-sm font-semibold tabular">
                 ${filteredTotalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </p>
             </div>
             <div className="p-3">
-              <p className="text-[11px] text-surface/60">Tiendas</p>
+              <p className="text-[11px] text-text-muted">Tiendas</p>
               <p className="text-sm font-semibold tabular">{filteredTotalStores}</p>
             </div>
             <div className="p-3">
-              <p className="text-[11px] text-surface/60">Articulos</p>
+              <p className="text-[11px] text-text-muted">Articulos</p>
               <p className="text-sm font-semibold tabular">{filteredTotalItems}</p>
             </div>
           </div>

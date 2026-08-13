@@ -457,7 +457,7 @@ export default function StoresPage() {
                   onClick={() => setSortBy(s)}
                   className={`min-h-[36px] whitespace-nowrap rounded-full px-3.5 text-xs font-medium transition-colors ${
                     sortBy === s
-                      ? 'bg-text text-surface'
+                      ? 'bg-primary text-white'
                       : 'border border-border bg-surface text-text-secondary hover:bg-surface-secondary'
                   }`}
                 >
@@ -472,7 +472,7 @@ export default function StoresPage() {
                   onClick={() => setChainFilter('all')}
                   className={`min-h-[36px] whitespace-nowrap rounded-full px-3.5 text-xs font-medium transition-colors ${
                     chainFilter === 'all'
-                      ? 'bg-text text-surface'
+                      ? 'bg-primary text-white'
                       : 'border border-border bg-surface text-text-secondary hover:bg-surface-secondary'
                   }`}
                 >
@@ -484,7 +484,7 @@ export default function StoresPage() {
                     onClick={() => setChainFilter(chain)}
                     className={`min-h-[36px] whitespace-nowrap rounded-full px-3.5 text-xs font-medium transition-colors ${
                       chainFilter === chain
-                        ? 'bg-text text-surface'
+                        ? 'bg-primary text-white'
                         : 'border border-border bg-surface text-text-secondary hover:bg-surface-secondary'
                     }`}
                   >

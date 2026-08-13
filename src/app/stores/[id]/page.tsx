@@ -140,25 +140,25 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
 
       <div className="space-y-4 p-4 md:p-0">
         {/* Store summary */}
-        <Card className="bg-text text-surface">
+        <Card className="border-info/20 bg-info/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/10 text-lg font-semibold text-surface">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface text-lg font-semibold text-info">
                 {store.name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-semibold">{store.name}</h2>
-                <p className="text-sm text-surface/70">{store.chain}</p>
+                <p className="text-sm text-text-secondary">{store.chain}</p>
               </div>
             </div>
             <a href={buildWazeUrl(store.lat, store.lng)} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" variant="outline" className="shrink-0 gap-1.5 border-white/20 bg-white/10 text-surface hover:bg-white/15">
+              <Button size="sm" variant="outline" className="shrink-0 gap-1.5 bg-surface">
                 <Navigation size={15} />
                 Ir
               </Button>
             </a>
           </div>
-          <p className="mt-3 text-sm text-surface/70">{store.address}</p>
+          <p className="mt-3 text-sm text-text-secondary">{store.address}</p>
           {latestSignal && (
             <div className="mt-2.5">
               <WifiBadge signal={latestSignal} />
