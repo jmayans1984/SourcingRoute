@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Heart,
   Plus,
-  Trash2,
   Store as StoreIcon,
   DollarSign,
   Tag,
@@ -255,25 +254,27 @@ export default function StoresPage() {
 
       <div className="space-y-4 p-4 md:p-0">
         {/* Summary */}
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="text-center">
+        <Card padding={false}>
+          <div className="grid grid-cols-3 divide-x divide-border">
+            <div className="p-4 text-center">
             <p className="text-[11px] text-text-muted">Tiendas</p>
-            <p className="mt-0.5 text-xl font-bold tabular">{stores.length}</p>
-          </Card>
-          <Card className="text-center">
+            <p className="mt-0.5 text-xl font-semibold tabular">{stores.length}</p>
+          </div>
+            <div className="p-4 text-center">
             <p className="text-[11px] text-text-muted">Artículos</p>
-            <p className="mt-0.5 text-xl font-bold tabular">{totalItemsAll}</p>
-          </Card>
-          <Card className="text-center">
+            <p className="mt-0.5 text-xl font-semibold tabular">{totalItemsAll}</p>
+          </div>
+            <div className="p-4 text-center">
             <p className="text-[11px] text-text-muted">Gastado</p>
-            <p className="mt-0.5 text-xl font-bold tabular">
+            <p className="mt-0.5 text-xl font-semibold tabular">
               ${totalSpentAll.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </Card>
 
         {/* View toggle */}
-        <div className="inline-flex w-full gap-1 rounded-xl border border-border bg-surface p-1">
+        <div className="inline-flex w-full gap-1 rounded-lg bg-surface-secondary p-1">
           {([
             { v: 'stores', label: 'Por Tienda' },
             { v: 'brands', label: 'Por Marca' },
@@ -283,7 +284,7 @@ export default function StoresPage() {
               onClick={() => setViewMode(opt.v)}
               className={`min-h-[38px] flex-1 rounded-lg px-3 text-sm font-medium transition-colors ${
                 viewMode === opt.v
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-surface text-text shadow-soft'
                   : 'text-text-secondary hover:bg-surface-secondary hover:text-text'
               }`}
             >
@@ -335,7 +336,7 @@ export default function StoresPage() {
                   {myBrands.map((b) => (
                     <div
                       key={b}
-                      className="flex items-center gap-1.5 rounded-full bg-primary/10 py-1.5 pl-3 pr-1.5 text-sm font-medium text-primary"
+                      className="flex items-center gap-1.5 rounded-full bg-surface-secondary py-1.5 pl-3 pr-1.5 text-sm font-medium text-text-secondary"
                     >
                       <span>{b}</span>
                       <button
@@ -435,13 +436,13 @@ export default function StoresPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar tienda por nombre o dirección..."
-                className="h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-10 text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                className="h-11 w-full rounded-lg border border-border bg-surface pl-10 pr-10 text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               />
               {query && (
                 <button
                   onClick={() => setQuery('')}
                   aria-label="Limpiar búsqueda"
-                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-secondary hover:text-text"
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-secondary hover:text-text"
                 >
                   <X size={16} />
                 </button>
@@ -456,7 +457,7 @@ export default function StoresPage() {
                   onClick={() => setSortBy(s)}
                   className={`min-h-[36px] whitespace-nowrap rounded-full px-3.5 text-xs font-medium transition-colors ${
                     sortBy === s
-                      ? 'bg-primary/10 text-primary'
+                      ? 'bg-text text-surface'
                       : 'border border-border bg-surface text-text-secondary hover:bg-surface-secondary'
                   }`}
                 >

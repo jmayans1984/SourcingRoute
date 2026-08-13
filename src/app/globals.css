@@ -9,20 +9,20 @@
    hex), so a single definition here flips the whole UI between light and dark.
    --------------------------------------------------------------------------- */
 :root {
-  --bg: #f7f8fa;
+  --bg: #f6f7f8;
   --surface: #ffffff;
-  --surface-secondary: #f3f4f7;
-  --surface-hover: #eef0f4;
-  --border: #e7e9ee;
-  --border-strong: #d6dae2;
+  --surface-secondary: #f1f3f5;
+  --surface-hover: #eaedf0;
+  --border: #e4e7eb;
+  --border-strong: #cfd5dd;
 
-  --text: #16181d;
-  --text-secondary: #5c6472;
-  --text-muted: #8b93a1;
+  --text: #171a1f;
+  --text-secondary: #606872;
+  --text-muted: #8a929d;
 
-  --primary: #5b61d6;
-  --primary-dark: #4a50c4;
-  --primary-light: #7a80e6;
+  --primary: #315c7c;
+  --primary-dark: #244762;
+  --primary-light: #4d7897;
 
   --success: #0f9d63;
   --warning: #d97706;
@@ -33,20 +33,20 @@
 }
 
 [data-theme="dark"] {
-  --bg: #0e1014;
-  --surface: #171a20;
-  --surface-secondary: #1e222a;
-  --surface-hover: #252a33;
-  --border: #272c35;
-  --border-strong: #363c47;
+  --bg: #101214;
+  --surface: #17191c;
+  --surface-secondary: #202327;
+  --surface-hover: #292d32;
+  --border: #2a2e34;
+  --border-strong: #3a4048;
 
-  --text: #e9ebef;
-  --text-secondary: #9aa2b1;
-  --text-muted: #6d7583;
+  --text: #eceff2;
+  --text-secondary: #a6adb6;
+  --text-muted: #757e89;
 
-  --primary: #838aff;
-  --primary-dark: #6f77f5;
-  --primary-light: #9ba1ff;
+  --primary: #8ab7d6;
+  --primary-dark: #6da0c4;
+  --primary-light: #acd0e8;
 
   --success: #34d399;
   --warning: #fbbf24;
@@ -118,7 +118,7 @@
 
   /* Calmer, tighter headings */
   h1, h2, h3 {
-    letter-spacing: -0.015em;
+    letter-spacing: 0;
   }
 
   input, select, textarea {
@@ -147,13 +147,12 @@
   /* Soft elevation — barely there, just enough to lift a card off the page */
   .shadow-soft {
     box-shadow:
-      0 1px 2px hsl(var(--shadow-color) / 0.06),
-      0 2px 8px hsl(var(--shadow-color) / 0.05);
+      0 1px 2px hsl(var(--shadow-color) / 0.04);
   }
   .shadow-soft-lg {
     box-shadow:
-      0 2px 4px hsl(var(--shadow-color) / 0.06),
-      0 8px 24px hsl(var(--shadow-color) / 0.08);
+      0 1px 2px hsl(var(--shadow-color) / 0.05),
+      0 8px 20px hsl(var(--shadow-color) / 0.06);
   }
 
   .animate-slide-up {

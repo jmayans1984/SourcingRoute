@@ -164,7 +164,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
       </div>
 
       {stops.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-4 text-center">
+        <div className="rounded-lg border border-dashed border-border p-4 text-center">
           <MapPin size={20} className="mx-auto text-text-muted" />
           <p className="mt-1 text-sm text-text-muted">
             Ingresa el nombre y la dirección de la tienda. Aparecerán en el mapa.
@@ -175,7 +175,7 @@ export function StopPicker({ stops, onChange, brands }: StopPickerProps) {
           {stops.map((stop, index) => (
             <div
               key={stop.place_id}
-              className="flex items-center gap-2 rounded-xl border border-border bg-surface p-2.5"
+              className="flex items-center gap-2 rounded-lg border border-border bg-surface p-2.5"
             >
               <div className="flex flex-col">
                 <button

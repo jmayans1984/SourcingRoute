@@ -13,12 +13,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary: 'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark shadow-soft',
-  secondary: 'bg-success text-white hover:opacity-90 active:opacity-100 shadow-soft',
+  primary: 'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark',
+  secondary: 'bg-success text-white hover:opacity-90 active:opacity-100',
   outline:
     'border border-border bg-surface text-text hover:bg-surface-secondary hover:border-border-strong',
   ghost: 'text-text-secondary hover:bg-surface-secondary hover:text-text',
-  danger: 'bg-danger text-white hover:opacity-90 active:opacity-100 shadow-soft',
+  danger: 'bg-danger text-white hover:opacity-90 active:opacity-100',
 };
 
 // Comfortable touch targets: 44px is the minimum recommended tap size, so md
@@ -36,7 +36,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={`
-          inline-flex items-center justify-center gap-2 rounded-xl font-semibold
+          inline-flex items-center justify-center gap-2 rounded-lg font-semibold
           transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2
           focus-visible:outline-primary disabled:opacity-50 disabled:pointer-events-none
           ${variantStyles[variant]}

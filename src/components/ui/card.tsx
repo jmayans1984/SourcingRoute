@@ -8,7 +8,7 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 export function Card({ children, padding = true, className = '', ...props }: CardProps) {
   return (
     <div
-      className={`rounded-2xl border border-border bg-surface shadow-soft ${padding ? 'p-4' : ''} ${className}`}
+      className={`rounded-lg border border-border bg-surface ${padding ? 'p-4' : ''} ${className}`}
       {...props}
     >
       {children}
@@ -21,7 +21,7 @@ export function CardHeader({ children, className = '' }: { children: ReactNode; 
 }
 
 export function CardTitle({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <h3 className={`text-base font-semibold text-text ${className}`}>{children}</h3>;
+  return <h3 className={`text-sm font-semibold text-text ${className}`}>{children}</h3>;
 }
 
 /**
@@ -39,10 +39,7 @@ export function SectionTitle({
 }) {
   return (
     <div className={`flex items-center justify-between gap-3 ${className}`}>
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-text">
-        <span className="h-3.5 w-1 rounded-full bg-primary" />
-        {children}
-      </h3>
+      <h3 className="text-sm font-semibold text-text">{children}</h3>
       {action}
     </div>
   );
@@ -65,7 +62,7 @@ export function IconChip({
     neutral: 'bg-surface-secondary text-text-secondary',
   };
   return (
-    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tones[tone]}`}>
+    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${tones[tone]}`}>
       {children}
     </span>
   );

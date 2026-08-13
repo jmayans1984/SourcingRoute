@@ -445,16 +445,14 @@ export default function DashboardPage() {
     <>
       <Header title="Inicio" subtitle={today} />
 
-      <div className="space-y-5 p-4 md:p-0">
+      <div className="space-y-6 p-4 md:p-0">
         {/* Greeting + primary action */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-xl font-bold tracking-tight md:text-2xl">
+            <h2 className="text-xl font-semibold md:text-2xl">
               Hola, {userName}
             </h2>
-            <p className="mt-0.5 text-sm text-text-secondary">
-              Listo para hacer sourcing hoy
-            </p>
+            <p className="mt-1 text-sm text-text-secondary">Resumen de tu actividad de sourcing.</p>
           </div>
           <div className="flex shrink-0 gap-2">
             <Link href="/visit/new" className="flex-1 md:flex-none">
@@ -473,14 +471,14 @@ export default function DashboardPage() {
         </div>
 
         {/* Period selector */}
-        <div className="inline-flex w-full gap-1 rounded-xl border border-border bg-surface p-1 md:w-auto">
+        <div className="inline-flex w-full gap-1 rounded-lg bg-surface-secondary p-1 md:w-auto">
           {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={`min-h-[38px] flex-1 rounded-lg px-3 text-sm font-medium transition-colors md:flex-none md:px-5 ${
                 period === p
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-surface text-text shadow-soft'
                   : 'text-text-secondary hover:bg-surface-secondary hover:text-text'
               }`}
             >
@@ -494,13 +492,13 @@ export default function DashboardPage() {
           {kpis.map((k) => (
             <Card key={k.label}>
               <div className="flex items-start justify-between gap-2">
-                <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${k.tone}`}>
-                  <k.icon size={17} />
+                <span className={`flex h-8 w-8 items-center justify-center rounded-md ${k.tone}`}>
+                  <k.icon size={16} />
                 </span>
                 <DeltaPill current={k.cur} prev={k.prev} invert={k.invert} />
               </div>
               <p className="mt-3 text-xs font-medium text-text-secondary">{k.label}</p>
-              <p className={`text-2xl font-bold tracking-tight tabular ${k.accent || 'text-text'}`}>
+              <p className={`text-2xl font-semibold tabular ${k.accent || 'text-text'}`}>
                 {k.value}
               </p>
               <p className="mt-0.5 text-[11px] text-text-muted">
@@ -511,18 +509,20 @@ export default function DashboardPage() {
         </div>
 
         {/* Secondary metrics */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {secondary.map((s) => (
-            <Card key={s.label}>
-              <div className="flex items-center gap-2 text-text-secondary">
-                <s.icon size={14} />
-                <span className="text-xs font-medium">{s.label}</span>
+        <Card padding={false}>
+          <div className="grid grid-cols-2 divide-x-0 divide-y divide-border md:grid-cols-4 md:divide-x md:divide-y-0">
+            {secondary.map((s) => (
+              <div key={s.label} className="p-4">
+                <div className="flex items-center gap-2 text-text-muted">
+                  <s.icon size={14} />
+                  <span className="text-xs font-medium">{s.label}</span>
+                </div>
+                <p className="mt-1.5 text-lg font-semibold tabular">{s.value}</p>
+                <p className="text-[11px] text-text-muted">{s.sub}</p>
               </div>
-              <p className="mt-1.5 text-xl font-bold tabular">{s.value}</p>
-              <p className="text-[11px] text-text-muted">{s.sub}</p>
-            </Card>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Card>
 
         {/* Routes */}
         <SectionTitle
@@ -546,13 +546,13 @@ export default function DashboardPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar ruta por nombre..."
-              className="h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-10 text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="h-11 w-full rounded-lg border border-border bg-surface pl-10 pr-10 text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
             {query && (
               <button
                 onClick={() => setQuery('')}
                 aria-label="Limpiar búsqueda"
-                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-secondary hover:text-text"
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-secondary hover:text-text"
               >
                 <X size={16} />
               </button>

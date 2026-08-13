@@ -26,8 +26,8 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium transition-colors ${
-                isActive ? 'text-primary' : 'text-text-muted active:bg-surface-secondary'
+              className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium transition-colors ${
+                isActive ? 'text-text' : 'text-text-muted active:bg-surface-secondary'
               }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.4 : 1.9} />
