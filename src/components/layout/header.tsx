@@ -24,19 +24,19 @@ export function Header({
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
-      <div className="mx-auto flex h-[60px] max-w-lg items-center gap-2 px-4 md:h-auto md:max-w-none md:px-0 md:pb-5 md:pt-1">
+    <header className="sticky top-0 z-40 bg-bg/95 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none">
+      <div className="mx-auto flex h-[68px] max-w-xl items-center gap-2 px-5 md:h-auto md:max-w-none md:px-0 md:pb-6 md:pt-1">
         {showBack && (
           <button
             onClick={() => router.back()}
             aria-label="Volver"
-            className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text"
+            className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text"
           >
             <ArrowLeft size={20} />
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-semibold md:text-2xl">{title}</h1>
+          <h1 className="truncate text-xl font-bold md:text-2xl">{title}</h1>
           {subtitle && (
             <p className="truncate text-xs text-text-muted md:text-sm">{subtitle}</p>
           )}

@@ -146,11 +146,11 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
     <AppShell>
       <Header title="Reporte de la Ruta" showBack />
 
-      <div className="space-y-4 p-4 md:mx-auto md:max-w-2xl md:p-0">
+      <div className="space-y-6 px-4 pb-4 md:mx-auto md:max-w-2xl md:px-0">
         {/* Completion banner */}
-        <Card className="border-success/20 bg-success/10 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-surface">
-            <Trophy size={24} className="text-success" />
+        <section className="rounded-2xl bg-success px-5 py-5 text-center text-white shadow-soft-lg">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
+            <Trophy size={24} className="text-white" />
           </div>
           <h2 className="mt-3 text-xl font-semibold">¡Día de sourcing completado!</h2>
           <p className="mt-1 text-sm text-text-secondary">
@@ -160,31 +160,31 @@ export default function TripReportPage({ params }: { params: Promise<{ id: strin
               day: 'numeric',
             })}
           </p>
-        </Card>
+        </section>
 
         {/* Key metrics */}
-        <div className="grid grid-cols-3 gap-2">
-          <Card className="text-center">
+        <div className="grid grid-cols-3 rounded-xl border border-border bg-surface p-1 shadow-soft">
+          <div className="px-2 py-3 text-center">
             <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
               <MapPin size={17} />
             </span>
             <p className="mt-2 text-xl font-semibold tabular">{visitedStops.length}</p>
             <p className="text-[11px] text-text-muted">Tiendas</p>
-          </Card>
-          <Card className="text-center">
+          </div>
+          <div className="border-x border-border px-2 py-3 text-center">
             <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-info/10 text-info">
               <Package size={17} />
             </span>
             <p className="mt-2 text-xl font-semibold tabular">{totalItemsBought}</p>
             <p className="text-[11px] text-text-muted">Artículos</p>
-          </Card>
-          <Card className="text-center">
+          </div>
+          <div className="px-2 py-3 text-center">
             <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-warning/10 text-warning">
               <DollarSign size={17} />
             </span>
             <p className="mt-2 text-xl font-semibold tabular">${totalSpent.toFixed(0)}</p>
             <p className="text-[11px] text-text-muted">Gastado</p>
-          </Card>
+          </div>
         </div>
 
         {/* P&L: product profit − route expenses = real profit */}

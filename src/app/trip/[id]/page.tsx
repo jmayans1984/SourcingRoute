@@ -521,39 +521,39 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
         }
       />
 
-      <div className="space-y-4 p-4 md:p-0">
+      <div className="space-y-6 px-4 pb-4 md:px-0">
         {/* Progress */}
-        <Card className="border-primary/20 bg-primary/10">
+        <section className="rounded-2xl bg-primary px-4 py-4 text-white shadow-soft-lg">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <TripStatusBadge status={trip.status} />
-              <span className="text-sm font-semibold text-text-secondary tabular">
+              <span className="text-sm font-semibold text-white/80 tabular">
                 {completedStops}/{stops.length} tiendas
               </span>
             </div>
-            <Button size="sm" variant="outline" onClick={openProducts} className="gap-1.5 bg-surface">
+            <Button size="sm" variant="outline" onClick={openProducts} className="gap-1.5 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
               <ShoppingBag size={15} />
               Productos
             </Button>
           </div>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface">
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/20">
             <div
-              className={`h-full rounded-full ${allDone ? 'bg-success' : 'bg-primary-light'}`}
+              className={`h-full rounded-full ${allDone ? 'bg-success' : 'bg-white'}`}
               style={{ width: `${progressPct}%` }}
             />
           </div>
-        </Card>
+        </section>
 
         {/* Money KPIs */}
-        <div className="grid grid-cols-3 gap-2">
-          <Card className="text-center">
+        <div className="grid grid-cols-3 rounded-xl border border-border bg-surface p-1 shadow-soft">
+          <div className="px-2 py-3 text-center">
             <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-info/10 text-info">
               <Package size={17} />
             </span>
             <p className="mt-2 text-lg font-semibold tabular">{totalItemsBought}</p>
             <p className="text-[11px] text-text-muted">Artículos</p>
-          </Card>
-          <Card className="text-center">
+          </div>
+          <div className="border-x border-border px-2 py-3 text-center">
             <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-warning/10 text-warning">
               <DollarSign size={17} />
             </span>
@@ -561,8 +561,8 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
               ${totalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
             <p className="text-[11px] text-text-muted">Gastado</p>
-          </Card>
-          <Card className="text-center">
+          </div>
+          <div className="px-2 py-3 text-center">
             <span
               className={`mx-auto flex h-8 w-8 items-center justify-center rounded-md ${
                 realProfit >= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
@@ -578,7 +578,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
             <p className="text-[11px] text-text-muted">
               Utilidad{roiPercent !== 0 ? ` · ${roiPercent}%` : ''}
             </p>
-          </Card>
+          </div>
         </div>
 
         {/* Logistics strip */}

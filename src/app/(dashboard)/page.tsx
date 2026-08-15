@@ -311,65 +311,70 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Header title="Inicio" subtitle={today} />
+      <Header title="Tu jornada" subtitle={today} />
 
-      <div className="space-y-6 p-4 md:p-0">
-        <Card className="border-primary/20 bg-primary/10">
+      <div className="space-y-7 px-4 pb-4 md:px-0">
+        <section className="app-hero overflow-hidden rounded-2xl px-5 py-5 text-white shadow-soft-lg">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-primary">Hola, {userName}</p>
-              <h2 className="mt-2 text-4xl font-semibold leading-none tabular">
+              <p className="text-xs font-semibold text-white/70">Balance estimado</p>
+              <h2 className="mt-2 text-4xl font-bold leading-none tabular">
                 ${Math.round(filteredTotalProfit).toLocaleString()}
               </h2>
-              <p className="mt-2 text-sm text-text-secondary">
-                Utilidad en {PERIOD_LONG[period].toLowerCase()}
+              <p className="mt-2 text-sm text-white/75">
+                {userName ? `${userName}, ` : ''}{PERIOD_LONG[period].toLowerCase()}
               </p>
             </div>
-            <div className="rounded-lg bg-surface px-3 py-2 text-right">
-              <p className="text-[11px] text-text-muted">ROI</p>
-              <p className="text-lg font-semibold tabular">{dashboardRoi}%</p>
+            <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-right backdrop-blur-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/65">Retorno</p>
+              <p className="mt-0.5 text-xl font-bold tabular">{dashboardRoi}%</p>
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 divide-x divide-primary/15 rounded-lg bg-surface/80">
-            <div className="p-3">
-              <p className="text-[11px] text-text-muted">Gastado</p>
-              <p className="text-sm font-semibold tabular">
+          <div className="mt-6 grid grid-cols-3 divide-x divide-white/15 border-t border-white/15 pt-4">
+            <div className="pr-2">
+              <p className="text-[10px] font-medium text-white/60">Invertido</p>
+              <p className="mt-1 text-sm font-bold tabular">
                 ${filteredTotalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </p>
             </div>
-            <div className="p-3">
-              <p className="text-[11px] text-text-muted">Tiendas</p>
-              <p className="text-sm font-semibold tabular">{filteredTotalStores}</p>
+            <div className="px-3">
+              <p className="text-[10px] font-medium text-white/60">Tiendas</p>
+              <p className="mt-1 text-sm font-bold tabular">{filteredTotalStores}</p>
             </div>
-            <div className="p-3">
-              <p className="text-[11px] text-text-muted">Articulos</p>
-              <p className="text-sm font-semibold tabular">{filteredTotalItems}</p>
+            <div className="pl-3">
+              <p className="text-[10px] font-medium text-white/60">Artículos</p>
+              <p className="mt-1 text-sm font-bold tabular">{filteredTotalItems}</p>
             </div>
           </div>
-        </Card>
+        </section>
 
-        <div className="grid grid-cols-2 gap-2">
+        <section className="grid grid-cols-2 gap-3">
           <Link href="/route/create">
-            <Button size="lg" fullWidth className="gap-2">
-              <Route size={19} />
-              Crear Ruta
-            </Button>
+            <div className="flex min-h-[94px] flex-col justify-between rounded-xl border border-primary/15 bg-primary/10 p-4 transition-colors active:bg-primary/15">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white"><Route size={18} /></span>
+              <span className="text-sm font-bold text-primary">Planear ruta</span>
+            </div>
           </Link>
           <Link href="/visit/new">
-            <Button size="lg" variant="outline" fullWidth className="gap-2">
-              <Store size={19} />
-              Visita Suelta
-            </Button>
+            <div className="flex min-h-[94px] flex-col justify-between rounded-xl border border-success/20 bg-success/10 p-4 transition-colors active:bg-success/15">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-white"><Store size={18} /></span>
+              <span className="text-sm font-bold text-success">Registrar visita</span>
+            </div>
           </Link>
-        </div>
+        </section>
 
-        <div className="inline-flex w-full gap-1 rounded-lg bg-surface-secondary p-1 md:w-auto">
+        <section>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wide text-text-muted">Rendimiento</p>
+            <p className="text-xs font-medium text-text-secondary">{PERIOD_LONG[period]}</p>
+          </div>
+          <div className="mt-3 inline-flex w-full gap-1 rounded-xl bg-surface-secondary p-1 md:w-auto">
           {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`min-h-[38px] flex-1 rounded-lg px-3 text-sm font-medium transition-colors md:flex-none md:px-5 ${
+              className={`min-h-[38px] flex-1 rounded-lg px-3 text-sm font-semibold transition-colors md:flex-none md:px-5 ${
                 period === p
                   ? 'bg-surface text-text shadow-soft'
                   : 'text-text-secondary hover:bg-surface-secondary hover:text-text'
@@ -378,22 +383,21 @@ export default function DashboardPage() {
               {PERIOD_LABELS[p]}
             </button>
           ))}
-        </div>
+          </div>
 
-        <Card padding={false}>
-          <div className="grid grid-cols-2 divide-x-0 divide-y divide-border md:grid-cols-4 md:divide-x md:divide-y-0">
+          <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-4">
             {secondary.map((s) => (
-              <div key={s.label} className="p-4">
-                <div className="flex items-center gap-2 text-text-muted">
-                  <s.icon size={14} />
-                  <span className="text-xs font-medium">{s.label}</span>
+              <div key={s.label} className="border-b border-border pb-3">
+                <div className="flex items-center gap-1.5 text-text-muted">
+                  <s.icon size={13} />
+                  <span className="text-[11px] font-semibold">{s.label}</span>
                 </div>
-                <p className="mt-1.5 text-lg font-semibold tabular">{s.value}</p>
+                <p className="mt-1 text-xl font-bold tabular">{s.value}</p>
                 <p className="text-[11px] text-text-muted">{s.sub}</p>
               </div>
             ))}
           </div>
-        </Card>
+        </section>
 
         {/* Routes */}
         <SectionTitle
@@ -403,7 +407,7 @@ export default function DashboardPage() {
             </span>
           }
         >
-          Mis Rutas
+          Rutas de trabajo
         </SectionTitle>
 
         {/* Search */}
@@ -417,7 +421,7 @@ export default function DashboardPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar ruta por nombre..."
-              className="h-11 w-full rounded-lg border border-border bg-surface pl-10 pr-10 text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-10 text-text placeholder:text-text-muted shadow-soft focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
             {query && (
               <button
@@ -468,11 +472,11 @@ export default function DashboardPage() {
                     <Card
                       key={trip.id}
                       onClick={() => setSelectedTrip(trip)}
-                      className="cursor-pointer active:bg-surface-hover"
+                      className="cursor-pointer border-l-4 border-l-primary p-4 shadow-soft transition-colors active:bg-surface-hover"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <MapPin size={17} />
                           </div>
                           <div className="min-w-0">
@@ -494,7 +498,7 @@ export default function DashboardPage() {
                         <TripStatusBadge status={trip.status} />
                       </div>
 
-                      <div className="mt-3 grid grid-cols-4 gap-1 rounded-xl bg-surface-secondary p-2.5 text-center">
+                      <div className="mt-4 grid grid-cols-4 border-y border-border py-3 text-center">
                         <div>
                           <p className="text-[10px] font-medium text-text-muted">Tiendas</p>
                           <p className="text-sm font-semibold tabular">
@@ -538,7 +542,7 @@ export default function DashboardPage() {
                           <>
                             <button
                               onClick={() => router.push(`/trip/${trip.id}`)}
-                              className="flex min-h-[40px] items-center gap-1 rounded-xl bg-primary/10 px-3.5 text-sm font-semibold text-primary transition-colors active:bg-primary/20"
+                            className="flex min-h-[40px] items-center gap-1 rounded-lg bg-primary/10 px-3.5 text-sm font-semibold text-primary transition-colors active:bg-primary/20"
                             >
                               Ver ruta
                               <ChevronRight size={15} />
@@ -548,7 +552,7 @@ export default function DashboardPage() {
                                 <button
                                   onClick={() => router.push(`/trip/${trip.id}/edit`)}
                                   aria-label="Editar ruta"
-                                  className="flex h-10 w-10 items-center justify-center rounded-xl text-text-muted transition-colors active:bg-surface-secondary"
+                                  className="flex h-10 w-10 items-center justify-center rounded-full text-text-muted transition-colors active:bg-surface-secondary"
                                 >
                                   <Pencil size={17} />
                                 </button>
@@ -556,7 +560,7 @@ export default function DashboardPage() {
                               <button
                                 onClick={() => setDeletingTripId(trip.id)}
                                 aria-label="Eliminar ruta"
-                                className="flex h-10 w-10 items-center justify-center rounded-xl text-text-muted transition-colors active:bg-danger/10 active:text-danger"
+                                className="flex h-10 w-10 items-center justify-center rounded-full text-text-muted transition-colors active:bg-danger/10 active:text-danger"
                               >
                                 <Trash2 size={17} />
                               </button>

@@ -365,7 +365,7 @@ export default function NewQuickVisitPage() {
       <AppShell>
         <Header title="Visita Suelta" subtitle="Registra una tienda sin necesidad de una ruta" showBack />
 
-        <div className="space-y-4 p-4 md:mx-auto md:max-w-lg md:p-0">
+        <div className="space-y-6 px-4 pb-4 md:mx-auto md:max-w-lg md:px-0">
           <Card>
             <div className="flex items-center gap-2">
               <IconChip tone="primary">
@@ -431,7 +431,7 @@ export default function NewQuickVisitPage() {
     <AppShell>
       <Header title={selectedStore.name} subtitle={selectedStore.address} showBack />
 
-      <div className="space-y-4 p-4 pb-32 md:mx-auto md:max-w-2xl md:p-0 md:pb-10">
+      <div className="space-y-6 px-4 pb-36 md:mx-auto md:max-w-2xl md:px-0 md:pb-10">
         {/* Store + change link */}
         <Card>
           <div className="flex items-center justify-between gap-3">
@@ -456,20 +456,20 @@ export default function NewQuickVisitPage() {
         </Card>
 
         {/* Live totals summary */}
-        <div className="grid grid-cols-3 gap-2">
-          <Card className="text-center">
+        <div className="grid grid-cols-3 rounded-xl border border-border bg-surface p-1 shadow-soft">
+          <div className="px-2 py-3 text-center">
             <p className="text-[11px] text-text-muted">Gastado</p>
             <p className="mt-0.5 text-lg font-semibold tabular">
               ${totalSpent.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
-          </Card>
-          <Card className="text-center">
+          </div>
+          <div className="border-x border-border px-2 py-3 text-center">
             <p className="text-[11px] text-text-muted">Venta Proy.</p>
             <p className="mt-0.5 text-lg font-semibold tabular">
               ${projectedSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
-          </Card>
-          <Card className="text-center">
+          </div>
+          <div className="px-2 py-3 text-center">
             <p className="text-[11px] text-text-muted">
               Utilidad{liveROI !== 0 ? ` · ${liveROI}%` : ''}
             </p>
@@ -478,7 +478,7 @@ export default function NewQuickVisitPage() {
             >
               ${projectedProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
-          </Card>
+          </div>
         </div>
 
         {/* Totals */}

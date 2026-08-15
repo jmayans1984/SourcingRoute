@@ -252,26 +252,26 @@ export default function StoresPage() {
         }
       />
 
-      <div className="space-y-4 p-4 md:p-0">
+      <div className="space-y-6 px-4 pb-4 md:px-0">
         {/* Summary */}
-        <Card padding={false}>
-          <div className="grid grid-cols-3 divide-x divide-border">
-            <div className="p-4 text-center">
-            <p className="text-[11px] text-text-muted">Tiendas</p>
-            <p className="mt-0.5 text-xl font-semibold tabular">{stores.length}</p>
+        <section className="rounded-2xl bg-info px-4 py-4 text-white shadow-soft-lg">
+          <div className="grid grid-cols-3 divide-x divide-white/20">
+            <div className="px-2 text-center">
+            <p className="text-[10px] font-semibold text-white/65">Tiendas</p>
+            <p className="mt-1 text-xl font-bold tabular">{stores.length}</p>
           </div>
-            <div className="p-4 text-center">
-            <p className="text-[11px] text-text-muted">Utilidad prom.</p>
-            <p className="mt-0.5 text-xl font-semibold tabular">${avgProfitAll.toFixed(0)}</p>
+            <div className="px-2 text-center">
+            <p className="text-[10px] font-semibold text-white/65">Utilidad prom.</p>
+            <p className="mt-1 text-xl font-bold tabular">${avgProfitAll.toFixed(0)}</p>
           </div>
-            <div className="p-4 text-center">
-            <p className="text-[11px] text-text-muted">Gastado</p>
-            <p className="mt-0.5 text-xl font-semibold tabular">
+            <div className="px-2 text-center">
+            <p className="text-[10px] font-semibold text-white/65">Gastado</p>
+            <p className="mt-1 text-xl font-bold tabular">
               ${totalSpentAll.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
             </div>
           </div>
-        </Card>
+        </section>
 
         {/* View toggle */}
         <div className="inline-flex w-full gap-1 rounded-lg bg-surface-secondary p-1">

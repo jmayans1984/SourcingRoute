@@ -15,7 +15,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden shrink-0 border-r border-border bg-surface md:flex md:w-56 md:flex-col">
+    <aside className="fixed inset-y-0 left-0 hidden border-r border-border bg-surface md:flex md:w-56 md:flex-col">
       <div className="flex h-16 items-center gap-2.5 px-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white">
           <Route size={18} />
@@ -34,7 +34,7 @@ export function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-surface-secondary text-text'
+                  ? 'bg-primary/10 text-primary'
                   : 'text-text-secondary hover:bg-surface-secondary hover:text-text'
               }`}
             >
